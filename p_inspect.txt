@@ -1,0 +1,130 @@
+﻿HAR=tools\captures\checkout-20260525-102401-ymz51oqk1h_edu.hsxhome.com.har
+
+==== /init entry #11 URL: https://api.stripe.com/v1/payment_pages/cs_live_a1lAsD4V5bFbvJw23KBLTYYwM4Coa2RnU9c7W5Puuw ====
+--- 顶层 keys ---
+  account_settings
+  application
+  automatic_payment_method_types
+  beta_versions
+  billing_address_collection
+  blob
+  blocked_billing_address_countries
+  bnpl_in_link_ui_enabled
+  bnpl_link_experiment_payment_method_type
+  cancel_url
+  capture_method
+  card_brand_choice
+  card_brands
+  checkout_multistep_ui
+  client_reference_id
+  config_id
+  consent
+  consent_collection
+  cross_sell_group
+  crypto_in_link_ui_enabled
+  currency
+  custom_components
+  custom_fields
+  custom_text
+  customer
+  customer_email
+  customer_managed_saved_payment_methods_offer_save
+  developer_tool_context
+  display_consent_collection_promotions
+  does_not_collect_postal_code_for_non_us_card_transactions
+  eid
+  elements_options
+  email_collection
+  enabled_third_party_wallets
+  enforcement_mode
+  experiments_data
+  feature_flags
+  geocoding
+  has_async_attached_payment_method
+  has_dynamic_tax_rates
+  id
+  init_checksum
+  invoice
+  invoice_creation
+  is_sandbox_merchant
+  is_unclaimed_anonymous_sandbox
+  klarna_info
+  konbini_confirmation_number
+  line_item_group
+  link_settings
+  livemode
+  locale
+  lpm_settings
+  managed_payments
+  management_url
+  mode
+  name_collection
+  object
+  on_behalf_of
+  ordered_payment_method_types
+  origin_context
+  payment_intent
+  payment_method_collection
+  payment_method_options
+  payment_method_specs
+  payment_method_types
+  payment_status
+  permissions
+  phone_number_collection
+  policies
+  prefilled
+  receipt_emails_enabled
+  recurring_details
+  redirect_on_completion
+  return_url
+  route_to_orchestration_interface
+  rqdata
+  sepa_debit_info
+  session_id
+  setup_future_usage
+  setup_future_usage_for_payment_method_type
+  setup_intent
+  shipping
+  shipping_address_collection
+  shipping_options
+  shipping_rate
+  shipping_tax_amounts
+  site_key
+  state
+  statement_descriptor
+  status
+  stripe_hosted_url
+  submit_type
+  subscription_data
+  subscription_settings
+  success_url
+  tax_context
+  tax_exclusion_from_total_is_allowed
+  tax_meta
+  token_notification_url
+  total_summary
+  ui_mode
+  url
+  use_payment_methods
+  utm_codes
+  visible_custom_component_locations
+
+--- payment_method_types 出现位置 ---
+  automatic_payment_method_types = True
+  bnpl_link_experiment_payment_method_type = None
+  consent_collection.payment_method_reuse_agreement = None
+  customer.has_fallback_payment_method = False
+  customer.payment_methods = []
+  customer_managed_saved_payment_methods_offer_save = None
+  elements_options.__checkout_automatic_payment_method_types = True
+  elements_options.payment_method_types = ['card', 'paypal']
+  has_async_attached_payment_method = False
+  link_settings.link_payment_session_context.link_payment_method_bank_account_permissions = None
+  link_settings.link_payment_session_context.link_supported_payment_methods = ['CARD', 'INSTANT_DEBITS']
+  link_settings.link_supported_payment_methods = ['CARD', 'INSTANT_DEBITS']
+  link_settings.link_supported_payment_methods_onboarding_enabled = ['CARD']
+  ordered_payment_method_types = ['card', 'paypal', 'apple_pay', 'google_pay']
+  payment_method_collection = 'always'
+  payment_method_specs = [{'async': False, 'fields': [], 'localization': {'content': {}}, 'type': 'card'}, {'async': False, 'fields': [], 'localization': {'content': {}}, 'selector_icon': {'dark_theme_png': 'https://js.stripe.com/v3/fingerprinted/img/payment-methods/icon-pm-paypal_dark@3x-26040e151c8f87187da2f997791fcc31.png', 'dark_theme_svg': 'https://js.stripe.com/v3/fingerprinted/img/payment-methods/icon-pm-paypal_dark-9bc6192b9cd4f215e9666611b097e460.svg', 'light_theme_png': 'https://js.stripe.com/v3/fingerprinted/img/payment-methods/icon-pm-paypal@3x-5227ab4fca3d36846bd6622f495cdf4b.png', 'light_theme_svg': 'https://js.stripe.com/v3/fingerprinted/img/payment-methods/icon-pm-paypal-0383a0ae3febbf0c0d8e721737884ab0.svg'}, 'type': 'paypal'}]
+  payment_method_types = ['card', 'paypal']
+  use_payment_methods = True

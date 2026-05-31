@@ -1,0 +1,22 @@
+﻿HAR=tools\captures\checkout-20260525-102401-ymz51oqk1h_edu.hsxhome.com.har
+
+==== entry #222 POST https://api.stripe.com/v1/payment_pages/cs_live_a1lAsD4V5bFbvJw23KBLTYYwM4Coa2RnU9c7W5Puuw3Jp7XuPscGClxTDq ====
+REQ body: eid=f2f5b5a0-daf7-4bb6-81a9-3f3ac853b84d&tax_region[country]=US&tax_region[state]=TN&tax_region[postal_code]=37214&tax_region[line1]=177++Buffalo+Creek+Road&tax_region[city]=Nashville&key=pk_live_51HO
+  [resp] elements_options.amount = 0
+  [resp] invoice.amount_due = 0
+  [resp] invoice.lines.data[0].amount = 2000
+  [resp] invoice.lines.data[0].discount_amounts[0].amount = 2000
+  [resp] invoice.lines.data[0].recurring_tax_amounts[0].amount = 195
+  [resp] invoice.lines.data[0].recurring_tax_amounts[1].amount = 0
+  [resp] invoice.lines.data[0].tax_amounts[0].amount = 0
+  [resp] invoice.subtotal = 2000
+  [resp] invoice.total = 0
+  [resp] invoice.total_discount_amounts[0].amount = 2000
+  [resp] invoice.total_tax_amounts[0].amount = 0
+  [resp] recurring_details.subtotal = 2000
+  [resp] recurring_details.total = 2195
+  [resp] recurring_details.total_tax_amounts[0].amount = 195
+  [resp] recurring_details.total_tax_amounts[1].amount = 0
+  [resp] total_summary.subtotal = 2000
+  [resp] total_summary.total = 0
+

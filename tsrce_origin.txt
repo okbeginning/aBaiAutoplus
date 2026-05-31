@@ -1,0 +1,44 @@
+﻿target tsrce value: checkoutuinodeweb_weasley
+
+# 479 POST  https://www.paypal.com/xoplatform/logger/api/logger/
+    Set-Cookie: tsrce=checkoutuinodeweb_weasley; Max-Age=259199; Domain=.paypal.com; Path=/; Expires=Thu, 28 May 2026 02:26:02 GMT; HttpOnly; Secure; SameSite=None
+
+# 479 POST  https://www.paypal.com/xoplatform/logger/api/logger/
+    Set-Cookie: tsrce=checkoutuinodeweb_weasley; Domain=.paypal.com; Path=/; Expires=Thu, 28 May 2026 02:26:03 GMT; HttpOnly; Secure; SameSite=None
+
+# 481 POST  https://www.paypal.com/xoplatform/logger/api/logger/
+    Set-Cookie: tsrce=checkoutuinodeweb_weasley; Max-Age=259199; Domain=.paypal.com; Path=/; Expires=Thu, 28 May 2026 02:26:02 GMT; HttpOnly; Secure; SameSite=None
+
+# 481 POST  https://www.paypal.com/xoplatform/logger/api/logger/
+    Set-Cookie: tsrce=checkoutuinodeweb_weasley; Domain=.paypal.com; Path=/; Expires=Thu, 28 May 2026 02:26:03 GMT; HttpOnly; Secure; SameSite=None
+
+# 487 POST  https://www.paypal.com/xoplatform/logger/api/logger/
+    Set-Cookie: tsrce=checkoutuinodeweb_weasley; Max-Age=259199; Domain=.paypal.com; Path=/; Expires=Thu, 28 May 2026 02:26:02 GMT; HttpOnly; Secure; SameSite=None
+
+# 487 POST  https://www.paypal.com/xoplatform/logger/api/logger/
+    Set-Cookie: tsrce=checkoutuinodeweb_weasley; Domain=.paypal.com; Path=/; Expires=Thu, 28 May 2026 02:26:03 GMT; HttpOnly; Secure; SameSite=None
+
+# 490 POST  https://www.paypal.com/xoplatform/logger/api/logger
+    Set-Cookie: tsrce=checkoutuinodeweb_weasley; Max-Age=259199; Domain=.paypal.com; Path=/; Expires=Thu, 28 May 2026 02:26:02 GMT; HttpOnly; Secure; SameSite=None
+
+# 490 POST  https://www.paypal.com/xoplatform/logger/api/logger
+    Set-Cookie: tsrce=checkoutuinodeweb_weasley; Domain=.paypal.com; Path=/; Expires=Thu, 28 May 2026 02:26:03 GMT; HttpOnly; Secure; SameSite=None
+
+# 491 POST  https://www.paypal.com/xoplatform/logger/api/logger
+    Set-Cookie: tsrce=checkoutuinodeweb_weasley; Max-Age=259199; Domain=.paypal.com; Path=/; Expires=Thu, 28 May 2026 02:26:02 GMT; HttpOnly; Secure; SameSite=None
+
+# 491 POST  https://www.paypal.com/xoplatform/logger/api/logger
+    Set-Cookie: tsrce=checkoutuinodeweb_weasley; Domain=.paypal.com; Path=/; Expires=Thu, 28 May 2026 02:26:03 GMT; HttpOnly; Secure; SameSite=None
+
+# 494 POST  https://www.paypal.com/xoplatform/logger/api/logger/
+    Set-Cookie: tsrce=checkoutuinodeweb_weasley; Max-Age=259199; Domain=.paypal.com; Path=/; Expires=Thu, 28 May 2026 02:26:02 GMT; HttpOnly; Secure; SameSite=None
+
+# 494 POST  https://www.paypal.com/xoplatform/logger/api/logger/
+    Set-Cookie: tsrce=checkoutuinodeweb_weasley; Domain=.paypal.com; Path=/; Expires=Thu, 28 May 2026 02:26:03 GMT; HttpOnly; Secure; SameSite=None
+
+# 501 POST  https://www.paypal.com/xoplatform/logger/api/logger/
+    Set-Cookie: tsrce=checkoutuinodeweb_weasley; Max-Age=259199; Domain=.paypal.com; Path=/; Expires=Thu, 28 May 2026 02:26:03 GMT; HttpOnly; Secure; SameSite=None
+
+# 501 POST  https://www.paypal.com/xoplatform/logger/api/logger/
+    Set-Cookie: tsrce=checkoutuinodeweb_weasley; Domain=.paypal.com; Path=/; Expires=Thu, 28 May 2026 02:26:04 GMT; HttpOnly; Secure; SameSite=None
+

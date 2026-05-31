@@ -1,0 +1,12 @@
+{
+  "package": "gopay-protocol-deploy",
+  "version": "0.2.0",
+  "generated_at": "2026-05-19",
+  "windows_supported": true,
+  "linux_supported": true,
+  "features": [
+    "protocol_registration",
+    "protocol_payment",
+    "protocol_worker"
+  ]
+}

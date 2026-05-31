@@ -1,0 +1,25 @@
+﻿URL: https://www.paypal.com/xoplatform/logger/api/logger/
+Method: POST
+Status: 200
+Content-Type response: ['application/json; charset=utf-8']
+
+--- Request headers (filter) ---
+  Accept: */*
+  Content-Type: application/json
+  x-app-name: checkoutuinodeweb_weasley
+  Origin: https://www.paypal.com
+  Referer: https://www.paypal.com/checkoutweb/signup?ssrt=1779675926321&ul=1&modxo_redirect_reason=guest_user&ba_token=BA-64L11684L95305809&locale.x=en_US&country.x=US&token=EC-7PS427879W537435X&rcache=1&cookieB
+  Cookie: tsrce=checkoutuinodeweb; datadome=OCpi0HAJADcwhXBhGkUIzEP_L10j9xUCDCVS8ztvO1Miyjh1Nv1fGW_D12D7R0Jp7anla_x2pnfsnWbOrMNtswen~lAoOZXRprlm9CnQRrsTD4saygybgOiqNJqMkHH4; ts_c=vr%3D5cf38f0a19e647e0847d9fe6fe
+
+--- Request body (first 1500) ---
+{"metrics":[{"dimensions":{"clientApp":"weasley","errorReason":"None","flow":"guest-xo-signup","interaction":"start_application","page":"main:xo:lite:weasley:billing","releaseDate":"5/13","status":"Start"},"metricEventName":"n/a","metricNamespace":"pp.xo.ci.count"}]}
+
+--- Response Set-Cookie (full list) ---
+  enforce_policy=ccpa; Max-Age=31536000; Domain=.paypal.com; Path=/; Expires=Tue, 25 May 2027 02:26:03 GMT; Secure; SameSite=None
+  LANG=en_US%3BUS; Max-Age=31556; Domain=.paypal.com; Path=/; Expires=Mon, 25 May 2026 11:11:59 GMT; HttpOnly; Secure; SameSite=None
+  tsrce=checkoutuinodeweb_weasley; Max-Age=259199; Domain=.paypal.com; Path=/; Expires=Thu, 28 May 2026 02:26:02 GMT; HttpOnly; Secure; SameSite=None
+  x-pp-s=eyJ0IjoiMTc3OTY3NTk2MzEyNiIsImwiOiIwIiwibSI6IjAifQ; Domain=.paypal.com; Path=/; HttpOnly; Secure; SameSite=None
+  tsrce=checkoutuinodeweb_weasley; Domain=.paypal.com; Path=/; Expires=Thu, 28 May 2026 02:26:03 GMT; HttpOnly; Secure; SameSite=None
+  l7_az=dcg04.phx; Path=/; Domain=paypal.com; Expires=Mon, 25 May 2026 02:56:03 GMT; HttpOnly; Secure
+  ts=vreXpYrS%3D1811211963%26vteXpYrS%3D1779677763%26vr%3D5cf38f0a19e647e0847d9fe6fe5763d1%26vt%3D5cf38f0a19e647e0847d9fe6fe5763d0%26vtyp%3Dnew; Path=/; Domain=paypal.com; Expires=Tue, 25 May 2027 02:26:03 GMT; HttpOnly; Secure
+  ts_c=vr%3D5cf38f0a19e647e0847d9fe6fe5763d1%26vt%3D5cf38f0a19e647e0847d9fe6fe5763d0; Path=/; Domain=paypal.com; Expires=Tue, 25 May 2027 02:26:03 GMT; Secure

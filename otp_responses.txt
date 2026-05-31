@@ -1,0 +1,49 @@
+﻿==== entry #527 URL operation=InitiateRiskBasedTwoFactorPhoneConfirmationMutation ====
+response: {
+  "data": {
+    "initiateRiskBasedTwoFactorPhoneConfirmation": {
+      "authId": "13553499022122000884",
+      "challengeId": "15756062681434441663",
+      "state": "PENDING",
+      "__typename": "RiskBasedPhoneConfirmationResponse"
+    }
+  },
+  "extensions": {
+    "tracing": {
+      "version": 1,
+      "startTime": "2026-05-25T02:26:28.157Z",
+      "endTime": "2026-05-25T02:26:28.374Z",
+      "duration": 217000000,
+      "execution": {
+        "resolvers": [
+          {
+            "path": [
+              "initiateRiskBasedTwoFactorPhoneConfirmation"
+            ],
+            "parentType":
+
+==== entry #530 URL operation=ConfirmRiskBasedTwoFactorPhoneConfirmationMutation ====
+response: {
+  "data": {
+    "confirmRiskBasedTwoFactorPhoneConfirmation": {
+      "authId": null,
+      "challengeId": null,
+      "state": "CONFIRMED",
+      "__typename": "RiskBasedPhoneConfirmationResponse"
+    }
+  },
+  "extensions": {
+    "tracing": {
+      "version": 1,
+      "startTime": "2026-05-25T02:26:39.486Z",
+      "endTime": "2026-05-25T02:26:39.619Z",
+      "duration": 133000000,
+      "execution": {
+        "resolvers": [
+          {
+            "path": [
+              "confirmRiskBasedTwoFactorPhoneConfirmation"
+            ],
+            "parentType": "Query",
+            "fieldName": "
+

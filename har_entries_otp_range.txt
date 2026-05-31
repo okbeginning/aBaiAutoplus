@@ -1,0 +1,13 @@
+﻿#522 POST  https://www.paypal.com/xoplatform/logger/api/logger/ qs= op=
+#523 POST  https://www.paypal.com/xoplatform/logger/api/logger/ qs= op=
+#524 POST  https://www.paypal.com/platform/tealeaftarget qs= op=
+#525 POST  https://www.paypal.com/xoplatform/logger/api/logger/ qs= op=
+#526 GET   s://www.paypalobjects.com/checkoutweb/release/weasley/20.fd2c73114dd684ebf71a.js qs= op=
+#527 POST  https://www.paypal.com/graphql qs=InitiateRiskBasedTwoFactorPhoneConfirmationMutation op=InitiateRiskBasedTwoFactorPhoneConfirmationMutation
+#528 POST  https://www.paypal.com/platform/tealeaftarget qs= op=
+#529 POST  https://www.paypal.com/xoplatform/logger/api/logger/ qs= op=
+#530 POST  https://www.paypal.com/graphql qs=ConfirmRiskBasedTwoFactorPhoneConfirmationMutation op=ConfirmRiskBasedTwoFactorPhoneConfirmationMutation
+#531 POST  https://www.paypal.com/graphql qs=SignUpNewMemberMutation op=SignUpNewMemberMutation
+#532 GET   https://www.paypal.com/checkoutweb/drop qs= op=
+#533 GET   https://www.paypal.com/checkoutweb/drop qs= op=
+#534 POST  https://www.paypal.com/xoplatform/logger/api/logger/ qs= op=

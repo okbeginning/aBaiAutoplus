@@ -1,0 +1,167 @@
+﻿========= OTP_CHALLENGE (idapps/graphql) (entry 505) =========
+URL: https://www.paypal.com/idapps/graphql
+--- request headers ---
+  Accept: */*
+  Content-Type: application/json
+  X-Requested-With: fetch
+  Origin: https://www.paypal.com
+  Cookie: tsrce=checkoutuinodeweb_weasley; datadome=tSRZFDWIAGFSOvAfNfM3xVCuUP8DZzniPClvm_Yhb_xElvWuDVZpbg81ER1IOuql8wOnRyKeB4HZNfJUjUyjyJ5LDtE9Y4tnZqEG7R7PwOjK~BaxUPZNlL_2dDTVbsIU; ts_c=vr%...
+--- response headers (Set-Cookie 与 paypal-* 相关) ---
+  x-xss-protection: 1; mode=block
+  paypal-debug-id: f563774affbb7
+  x-content-type-options: nosniff
+  set-cookie: enforce_policy=ccpa; Max-Age=31536000; Domain=.paypal.com; Path=/; Expires=Tue, 25 May 2027 02:26:05 GMT; Secure; SameSite=None
+  set-cookie: LANG=en_US%3BUS; Max-Age=31556; Domain=.paypal.com; Path=/; Expires=Mon, 25 May 2026 11:12:01 GMT; HttpOnly; Secure; SameSite=None
+  set-cookie: x-pp-s=eyJ0IjoiMTc3OTY3NTk2NTU3MCIsImwiOiIwIiwibSI6IjAifQ; Domain=.paypal.com; Path=/; HttpOnly; Secure; SameSite=None
+  set-cookie: tsrce=identityappsnodeweb; Domain=.paypal.com; Path=/; Expires=Thu, 28 May 2026 02:26:05 GMT; HttpOnly; SameSite=None; Secure
+  set-cookie: l7_az=dcg15.slc; Path=/; Domain=paypal.com; Expires=Mon, 25 May 2026 02:56:05 GMT; HttpOnly; Secure
+  set-cookie: ts=vreXpYrS%3D1811211965%26vteXpYrS%3D1779677765%26vr%3D5cf38f0a19e647e0847d9fe6fe5763d1%26vt%3D5cf38f0a19e647e0847d9fe6fe5763d0%26vtyp%3Dnew; Path=/; Domain=paypal.com; Expires=Tu...
+  set-cookie: ts_c=vr%3D5cf38f0a19e647e0847d9fe6fe5763d1%26vt%3D5cf38f0a19e647e0847d9fe6fe5763d0; Path=/; Domain=paypal.com; Expires=Tue, 25 May 2027 02:26:05 GMT; Secure
+  x-served-by: cache-dfw-kdal2120136-DFW
+  x-served-by: cache-pdk-katl1840088-PDK
+  x-served-by: cache-pdk-katl1840088-PDK
+  x-served-by: cache-pdk-katl1840088-PDK
+  x-cache: MISS
+  x-cache: MISS
+  x-cache: MISS
+  x-cache: MISS
+  x-cache-hits: 0
+  x-cache-hits: 0
+  x-cache-hits: 0
+  x-cache-hits: 0
+  x-timer: S1779675965.217774
+  x-timer: VS0
+  x-timer: VE414
+  X-Firefox-Spdy: h2
+
+========= OTP_INITIATE (entry 527) =========
+URL: https://www.paypal.com/graphql?InitiateRiskBasedTwoFactorPhoneConfirmationMutation
+--- request headers ---
+  Accept: */*
+  Referer: https://www.paypal.com/checkoutweb/signup?ssrt=1779675926321&ul=1&modxo_redirect_reason=guest_user&ba_token=BA-64L11684L95305809&locale.x=en_US&country.x=US&token=EC-7PS427879W5374...
+  content-type: application/json
+  paypal-client-context: EC-7PS427879W537435X
+  paypal-client-metadata-id: EC-7PS427879W537435X
+  x-app-name: checkoutuinodeweb_weasley
+  x-country: US
+  x-locale: en_US
+  Origin: https://www.paypal.com
+  Cookie: tsrce=checkoutuinodeweb_weasley; datadome=eyS~S5fGC71xGPI~SvegurSv7ESYSyfOmCVueFjsKvM5DI7SK~DEQgWlLBNHPzOHkD23tZ~_40CtMroxBD_6rFI5E9aKk5WEpOQnOz_EKUz7bIMXcBdykIefdszDHhWl; ts_c=vr%...
+--- response headers (Set-Cookie 与 paypal-* 相关) ---
+  paypal-debug-id: f449800a3350f
+  x-content-type-options: nosniff
+  x-xss-protection: 1; mode=block
+  set-cookie: tsrce=xobuyernodeserv; Max-Age=259199; Domain=.paypal.com; Path=/; Expires=Thu, 28 May 2026 02:26:27 GMT; HttpOnly; Secure; SameSite=None
+  set-cookie: enforce_policy=ccpa; Max-Age=31536000; Domain=.paypal.com; Path=/; Expires=Tue, 25 May 2027 02:26:28 GMT; Secure; SameSite=None
+  set-cookie: x-pp-s=eyJ0IjoiMTc3OTY3NTk4ODM3NyIsImwiOiIwIiwibSI6IjAifQ; Domain=.paypal.com; Path=/; HttpOnly; Secure; SameSite=None
+  set-cookie: tsrce=graphqlnodeweb; Domain=.paypal.com; Path=/; Expires=Thu, 28 May 2026 02:26:28 GMT; HttpOnly; Secure; SameSite=None
+  set-cookie: l7_az=dcg15.slc; Path=/; Domain=paypal.com; Expires=Mon, 25 May 2026 02:56:28 GMT; HttpOnly; Secure
+  set-cookie: ts=vreXpYrS%3D1811211988%26vteXpYrS%3D1779677788%26vr%3D5cf38f0a19e647e0847d9fe6fe5763d1%26vt%3D5cf38f0a19e647e0847d9fe6fe5763d0%26vtyp%3Dnew; Path=/; Domain=paypal.com; Expires=Tu...
+  set-cookie: ts_c=vr%3D5cf38f0a19e647e0847d9fe6fe5763d1%26vt%3D5cf38f0a19e647e0847d9fe6fe5763d0; Path=/; Domain=paypal.com; Expires=Tue, 25 May 2027 02:26:28 GMT; Secure
+  x-frame-options: SAMEORIGIN
+  x-served-by: cache-dfw-kdfw8210046-DFW
+  x-served-by: cache-pdk-katl1840026-PDK
+  x-served-by: cache-pdk-katl1840026-PDK
+  x-served-by: cache-pdk-katl1840088-PDK
+  x-cache: MISS
+  x-cache: MISS
+  x-cache: MISS
+  x-cache: MISS
+  x-cache-hits: 0
+  x-cache-hits: 0
+  x-cache-hits: 0
+  x-cache-hits: 0
+  x-timer: S1779675988.898970
+  x-timer: VS0
+  x-timer: VE533
+  X-Firefox-Spdy: h2
+
+========= OTP_CONFIRM (entry 530) =========
+URL: https://www.paypal.com/graphql?ConfirmRiskBasedTwoFactorPhoneConfirmationMutation
+--- request headers ---
+  Accept: */*
+  Referer: https://www.paypal.com/checkoutweb/signup?ssrt=1779675926321&ul=1&modxo_redirect_reason=guest_user&ba_token=BA-64L11684L95305809&locale.x=en_US&country.x=US&token=EC-7PS427879W5374...
+  content-type: application/json
+  paypal-client-context: EC-7PS427879W537435X
+  paypal-client-metadata-id: EC-7PS427879W537435X
+  x-app-name: checkoutuinodeweb_weasley
+  x-country: US
+  x-locale: en_US
+  Origin: https://www.paypal.com
+  Cookie: tsrce=graphqlnodeweb; datadome=eyS~S5fGC71xGPI~SvegurSv7ESYSyfOmCVueFjsKvM5DI7SK~DEQgWlLBNHPzOHkD23tZ~_40CtMroxBD_6rFI5E9aKk5WEpOQnOz_EKUz7bIMXcBdykIefdszDHhWl; ts_c=vr%3D5cf38f0a1...
+--- response headers (Set-Cookie 与 paypal-* 相关) ---
+  paypal-debug-id: f8044031ac323
+  x-content-type-options: nosniff
+  x-xss-protection: 1; mode=block
+  set-cookie: tsrce=xobuyernodeserv; Max-Age=259199; Domain=.paypal.com; Path=/; Expires=Thu, 28 May 2026 02:26:38 GMT; HttpOnly; Secure; SameSite=None
+  set-cookie: enforce_policy=ccpa; Max-Age=31536000; Domain=.paypal.com; Path=/; Expires=Tue, 25 May 2027 02:26:39 GMT; Secure; SameSite=None
+  set-cookie: x-pp-s=eyJ0IjoiMTc3OTY3NTk5OTYyNCIsImwiOiIwIiwibSI6IjAifQ; Domain=.paypal.com; Path=/; HttpOnly; Secure; SameSite=None
+  set-cookie: l7_az=dcg15.slc; Path=/; Domain=paypal.com; Expires=Mon, 25 May 2026 02:56:39 GMT; HttpOnly; Secure
+  set-cookie: ts=vreXpYrS%3D1811211999%26vteXpYrS%3D1779677799%26vr%3D5cf38f0a19e647e0847d9fe6fe5763d1%26vt%3D5cf38f0a19e647e0847d9fe6fe5763d0%26vtyp%3Dnew; Path=/; Domain=paypal.com; Expires=Tu...
+  set-cookie: ts_c=vr%3D5cf38f0a19e647e0847d9fe6fe5763d1%26vt%3D5cf38f0a19e647e0847d9fe6fe5763d0; Path=/; Domain=paypal.com; Expires=Tue, 25 May 2027 02:26:39 GMT; Secure
+  x-frame-options: SAMEORIGIN
+  x-served-by: cache-dfw-kdfw8210088-DFW
+  x-served-by: cache-pdk-katl1840088-PDK
+  x-served-by: cache-pdk-katl1840088-PDK
+  x-served-by: cache-pdk-katl1840088-PDK
+  x-cache: MISS
+  x-cache: MISS
+  x-cache: MISS
+  x-cache: MISS
+  x-cache-hits: 0
+  x-cache-hits: 0
+  x-cache-hits: 0
+  x-cache-hits: 0
+  x-timer: S1779675999.987707
+  x-timer: VS0
+  x-timer: VE689
+  X-Firefox-Spdy: h2
+
+========= SIGNUP (entry 531) =========
+URL: https://www.paypal.com/graphql?SignUpNewMemberMutation
+--- request headers ---
+  Accept: */*
+  Referer: https://www.paypal.com/checkoutweb/signup?ssrt=1779675926321&ul=1&modxo_redirect_reason=guest_user&ba_token=BA-64L11684L95305809&locale.x=en_US&country.x=US&token=EC-7PS427879W5374...
+  content-type: application/json
+  paypal-client-context: EC-7PS427879W537435X
+  paypal-client-metadata-id: EC-7PS427879W537435X
+  x-app-name: checkoutuinodeweb_weasley
+  x-country: US
+  x-locale: en_US
+  X-Requested-With: fetch
+  Origin: https://www.paypal.com
+  Cookie: tsrce=xobuyernodeserv; datadome=eyS~S5fGC71xGPI~SvegurSv7ESYSyfOmCVueFjsKvM5DI7SK~DEQgWlLBNHPzOHkD23tZ~_40CtMroxBD_6rFI5E9aKk5WEpOQnOz_EKUz7bIMXcBdykIefdszDHhWl; ts_c=vr%3D5cf38f0a...
+--- response headers (Set-Cookie 与 paypal-* 相关) ---
+  x-content-type-options: nosniff
+  x-xss-protection: 1; mode=block
+  x-frame-options: SAMEORIGIN
+  paypal-debug-id: f9886695c1222
+  set-cookie: enforce_policy=ccpa; Max-Age=31536000; Domain=.paypal.com; Path=/; Expires=Tue, 25 May 2027 02:26:41 GMT; Secure; SameSite=None
+  set-cookie: TfXMWj95u2_Zf1Kmv_GCUOjlGG8=-6fcGoVVsX5UV8bACZyRGRdo7DgoQadoPIJoIExE6Yd54OGPOXQzQ64SVAm6ZAmNgirpDJE-rUesRnaMUAMu0Zi6waVhV9GrX8w4kvLUJBAMCsQNcia2evUIJBt3T8jc_E4O50CvQ2Tlc0m8wk1LvDyi...
+  set-cookie: login_email=lucascooper82528naa%40gmail.com; Max-Age=63113851; Domain=.paypal.com; Path=/; Expires=Wed, 24 May 2028 14:04:12 GMT; HttpOnly; Secure; SameSite=None
+  set-cookie: d_id=1779676001006; Max-Age=315619199; Domain=.paypal.com; Path=/; Expires=Sun, 25 May 2036 02:26:40 GMT; HttpOnly; Secure; SameSite=None
+  set-cookie: AV894Kt2TSumQQrJwe-8mzmyREO=S23AAPz3SqRhBb7RJznUwUOgcI2i83zhDGSJsPiKyjIyA6Snm3sy23SWaYqiQ4PX_HD4v0-ssr_IPNUvId4aD04CProEsPYGQ; Domain=.paypal.com; Path=/; HttpOnly; Secure; SameSit...
+  set-cookie: rmuc=gy6oaeJoMWezkske1SwCiUkfeknHxgymv-aBcz3hE9QHM7YlkgwUD31j58BJvnpKC1pmMzyel-1_Y9S6HZvmLy7YS-dpgtpAoVbn-rSoUfVSpgNhH7QcOpG2plG5hqTZUkC9HpgQgptz_AGWTSNx5eIL7Rtz-e86s1Ysr116kpXkGDw...
+  set-cookie: HaC80bwXscjqZ7KM6VOxULOB534=pubKNpvNZTOR8BUjT0Zqr1TKO9e-HYzK_SWq462N080bWb93innfq01tzmhpTMuuqW_nY8CZGSOu2C-sxMyJAc7EdkaGASW0jRSenEV8hi7rMpXMHbWK4NvbZ5-mTUxA7SqoT0; Domain=.paypal.c...
+  set-cookie: x-pp-s=eyJ0IjoiMTc3OTY3NjAwMTk3NyIsImwiOiIwIiwibSI6IjAifQ; Domain=.paypal.com; Path=/; HttpOnly; Secure; SameSite=None
+  set-cookie: tsrce=graphqlnodeweb; Domain=.paypal.com; Path=/; Expires=Thu, 28 May 2026 02:26:41 GMT; HttpOnly; Secure; SameSite=None
+  set-cookie: l7_az=dcg15.slc; Path=/; Domain=paypal.com; Expires=Mon, 25 May 2026 02:56:41 GMT; HttpOnly; Secure
+  set-cookie: ts=vreXpYrS%3D1811212000%26vteXpYrS%3D1779677800%26vr%3D5cf38f0a19e647e0847d9fe6fe5763d1%26vt%3D5cf38f0a19e647e0847d9fe6fe5763d0%26vtyp%3Dnew; Path=/; Domain=paypal.com; Expires=Tu...
+  set-cookie: ts_c=vr%3D5cf38f0a19e647e0847d9fe6fe5763d1%26vt%3D5cf38f0a19e647e0847d9fe6fe5763d0; Path=/; Domain=paypal.com; Expires=Tue, 25 May 2027 02:26:41 GMT; Secure
+  x-served-by: cache-dfw-kdal2120060-DFW
+  x-served-by: cache-pdk-katl1840088-PDK
+  x-served-by: cache-pdk-katl1840088-PDK
+  x-served-by: cache-pdk-katl1840088-PDK
+  x-cache: MISS
+  x-cache: MISS
+  x-cache: MISS
+  x-cache: MISS
+  x-cache-hits: 0
+  x-cache-hits: 0
+  x-cache-hits: 0
+  x-cache-hits: 0
+  x-timer: S1779676000.119403
+  x-timer: VS0
+  x-timer: VE2087
+  X-Firefox-Spdy: h2
+

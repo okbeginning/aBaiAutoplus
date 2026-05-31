@@ -1,0 +1,22 @@
+﻿ä»»å¡å·²åå»º: platform_action
+ä»»å¡å·²å¼å§æ§è¡
+SMS å·ç æ± å·²å è½½ 2 æ¡
+çæ ChatGPT æµè¯æ¯ä»é¾æ¥ä¸ä½¿ç¨ä»£ç
+Camoufox checkout ä½¿ç¨ä»£ç: ***@gate-jp.kookeey.info:1000
+æ¯ä»é¾æ¥å·²çæï¼å¼å§èªå¨ PayPal checkout
+checkout æ¨¡å¼: protocol
+å·²å¯ç¨éªè¯ç èªå¨æ±è§£ï¼provider: YesCaptcha
+å¯å¨åè®®æ¨¡å¼ checkout
+åè®®æ¨¡å¼ checkout å¯å¨ï¼pipeline 5 æ®µ
+åè®®æ¨¡å¼å¯ç¨ SMS å·ç æ± ï¼å± 2 æ¡
+åè®®æ¨¡å¼çæ paypal-client-metadata-id: â¦ (len=0)
+[stripe_checkout] cs=cs_live_a1NiOa9TwvjMnvR3QjvdM1bzKTFHfKBVcTrgldntVuMcYympWksEPaCWHM è°ç¨ /init
+[stripe_checkout] /init payment_method_types=['card', 'paypal'] automatic=True invoice.total=2000 invoice.amount_due=2000
+[stripe_checkout] /init ååº expected_amount=2000 (cents)
+[stripe_checkout] æäº¤ç¨å¡å°å WA/99343
+[stripe_checkout] åå»º PayPal PaymentMethod (email=7heik9v2y9@edu.hsxhome.com)
+[stripe_checkout] payment_method_id=pm_1TaqKxC6h1nxGoI3FeJNi60j
+[stripe_checkout] /confirm
+åè®®æ¨¡å¼ checkout å¤±è´¥ï¼stage=stripe_checkoutï¼ï¼ä¸ååè½ camoufoxï¼ä¾¿äºææ¥ï¼ï¼åå : /confirm å¤±è´¥: Stripe POST https://api.stripe.com/v1/payment_pages/cs_live_a1NiOa9TwvjMnvR3QjvdM1bzKTFHfKBVcTrgldntVuMcYympWksEPaCWHM/confirm â status=400 request-id='req_z0wRPoBI7LrdQn' body='{\n  "error": {\n    "code": "checkout_amount_mismatch",\n    "message": "The computed invoice amount does not match the latest invoice on the subscription.",\n    "param": "expected_amount",\n    "type": "invalid_request_error"\n  }\n}\n'
+PayPal checkout èªå¨æµç¨å¤±è´¥: /confirm å¤±è´¥: Stripe POST https://api.stripe.com/v1/payment_pages/cs_live_a1NiOa9TwvjMnvR3QjvdM1bzKTFHfKBVcTrgldntVuMcYympWksEPaCWHM/confirm â status=400 request-id='req_z0wRPoBI7LrdQn' body='{\n  "error": {\n    "code": "checkout_amount_mismatch",\n    "message": "The computed invoice amount does not match the latest invoice on the subscription.",\n    "param": "expected_amount",\n    "type": "invalid_request_error"\n  }\n}\n'
+ä»»å¡ç»æ: failed

@@ -1,0 +1,4 @@
+*.har
+*.txt
+*.json
+!.gitignore

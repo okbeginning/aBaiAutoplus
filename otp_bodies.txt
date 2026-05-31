@@ -1,0 +1,27 @@
+﻿==== entry #527 URL=https://www.paypal.com/graphql?InitiateRiskBasedTwoFactorPhoneConfirmationMutation ====
+{
+  "operationName": "InitiateRiskBasedTwoFactorPhoneConfirmationMutation",
+  "variables": {
+    "locale": {
+      "country": "US",
+      "lang": "en"
+    },
+    "phoneCountry": "US",
+    "phoneNumber": "5722188973",
+    "token": "EC-7PS427879W537435X"
+  },
+  "query": "mutation InitiateRiskBasedTwoFactorPhoneConfirmationMutation($phoneNumber: String!, $locale: LocaleInput!, $phoneCountry: CountryCodes!, $token: String!) {\n  initiateRiskBasedTwoFactorPhoneConfirmation(\n    locale: $locale\n    phoneCountry: $phoneCountry\n    phoneNumber: $phoneNumber\n    token: $token\n  ) {\n    authId\n    challengeId\n    state\n    __typename\n  }\n}\n"
+}
+
+==== entry #530 URL=https://www.paypal.com/graphql?ConfirmRiskBasedTwoFactorPhoneConfirmationMutation ====
+{
+  "operationName": "ConfirmRiskBasedTwoFactorPhoneConfirmationMutation",
+  "variables": {
+    "authId": "13553499022122000884",
+    "challengeId": "15756062681434441663",
+    "pin": "658741",
+    "token": "EC-7PS427879W537435X"
+  },
+  "query": "mutation ConfirmRiskBasedTwoFactorPhoneConfirmationMutation($pin: String!, $authId: String!, $challengeId: String!, $token: String!) {\n  confirmRiskBasedTwoFactorPhoneConfirmation(\n    pin: $pin\n    authId: $authId\n    challengeId: $challengeId\n    token: $token\n  ) {\n    authId\n    challengeId\n    state\n    __typename\n  }\n}\n"
+}
+

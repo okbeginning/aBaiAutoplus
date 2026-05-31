@@ -1,0 +1,59 @@
+﻿HAR=tools\captures\checkout-20260525-102401-ymz51oqk1h_edu.hsxhome.com.har
+
+========= Stripe init (POST /init) =========
+entry #11 URL: https://api.stripe.com/v1/payment_pages/cs_live_a1lAsD4V5bFbvJw23KBLTYYwM4Coa2RnU9c7W5Puuw3Jp7XuPscGClxTDq/init
+  browser_locale: en-US
+  browser_timezone: America/Chicago
+  eid: NA
+  key: pk_live_51HOrSwC6h1nxGoI3lTAgRjYVrz4dU3fVOabyCcKR3pbEJguCVAlqCxdxCUvoRh1XWwRacViovU3kLKvpkjh7IqkW00iXQsjo3n
+  redirect_type: url
+    [resp] .currency = 'usd'
+    [resp] .elements_options.amount = 0
+    [resp] .elements_options.currency = 'usd'
+    [resp] .invoice.amount_due = 0
+    [resp] .invoice.currency = 'usd'
+    [resp] .invoice.lines.data[0].amount = 2000
+    [resp] .invoice.lines.data[0].currency = 'usd'
+    [resp] .invoice.lines.data[0].discount_amounts[0].amount = 2000
+    [resp] .invoice.lines.data[0].discount_amounts[0].coupon.currency = None
+    [resp] .invoice.lines.data[0].discount_amounts[0].currency = 'usd'
+    [resp] .invoice.lines.data[0].price.currency = 'usd'
+    [resp] .invoice.subtotal = 2000
+    [resp] .invoice.total = 0
+    [resp] .invoice.total_discount_amounts[0].amount = 2000
+    [resp] .invoice.total_discount_amounts[0].coupon.currency = None
+    [resp] .invoice.total_discount_amounts[0].currency = 'usd'
+    [resp] .recurring_details.subtotal = 2000
+    [resp] .recurring_details.total = 2000
+    [resp] .total_summary.subtotal = 2000
+    [resp] .total_summary.total = 0
+
+========= Stripe confirm (POST /confirm) =========
+entry #251 URL: https://api.stripe.com/v1/payment_pages/cs_live_a1lAsD4V5bFbvJw23KBLTYYwM4Coa2RnU9c7W5Puuw3Jp7XuPscGClxTDq/confirm
+  _stripe_version: 2020-08-27;custom_checkout_beta=v1
+  client_attribution_metadata[checkout_config_id]: 05adc040-3d56-4ef0-a359-ba8af717f7ad
+  client_attribution_metadata[checkout_session_id]: cs_live_a1lAsD4V5bFbvJw23KBLTYYwM4Coa2RnU9c7W5Puuw3Jp7XuPscGClxTDq
+  client_attribution_metadata[client_session_id]: b983442a-cea1-4e70-95dd-3e7c588df227
+  client_attribution_metadata[merchant_integration_source]: checkout
+  client_attribution_metadata[merchant_integration_version]: hosted_checkout
+  client_attribution_metadata[payment_method_selection_flow]: automatic
+  consent[terms_of_service]: accepted
+  eid: NA
+  expected_amount: 0
+  expected_payment_method_type: paypal
+  guid: 8c8d3c93-b90f-4106-993b-92ee1d5ba5eda0a6a9
+  init_checksum: dzMHsXSY1bWt9PH1ZP0uqXd7Q8U2TyWM
+  js_checksum: qto~d^n0=QU>azbu]]eR{Rm`d&m_]}q`U|_Oe{e;s^__M|m^o?U^`w
+  key: pk_live_51HOrSwC6h1nxGoI3lTAgRjYVrz4dU3fVOabyCcKR3pbEJguCVAlqCxdxCUvoRh1XWwRacViovU3kLKvpkjh7IqkW00iXQsjo3n
+  link_brand: link
+  muid: 78afb34b-a0ce-475f-b8f6-2da02c6f485da7c503
+  passive_captcha_ekey: 
+  passive_captcha_token: P1_eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJwZCI6MCwiZXhwIjoxNzc5NzYyMjcyLCJjZGF0YSI6ImpmTHpLVndJUzJxby9Xd3k0K09lcXljS...
+  payment_method: pm_1TaoChC6h1nxGoI3lbMWH5oh
+  px3: 34dc03256335caf0ae9251b2cf828d8be6457456a900b640f6c0134be084ca91:pLX0OBO+gBgppaXf3ezwvZ/gOzNXg0uWnHXV1cfdcMslHHTUyMXb...
+  pxcts: YwFb0JSq3zZrd-1O6zAOXcHVC9qHIJvUq6mMRNjEVyM=:TI5wadY6DX0nmgOD3gv6-K9jj2ver2bkR08lv-pshoStdh7Z9hYnKjH6Ip5iGIyQorjxD23w...
+  pxvid: e668fa57-57e0-11f1-9502-051b630b132f
+  return_url: https://pay.openai.com/c/pay/cs_live_a1lAsD4V5bFbvJw23KBLTYYwM4Coa2RnU9c7W5Puuw3Jp7XuPscGClxTDq?redirect_pm_type=payp...
+  rv_timestamp: qto>n<Q=U&CyY&`>X^r<YNr<YN`<Y_C<Y_C<Y^`zY_`<Y^n{U>o&U&CyXO<s[OP<[bX;YO`<exYvd_T$XbX;eOP$X_d;[OUs[bn=Ybd;YbovdNn{U>e&U...
+  sid: 9c7039e6-c561-4429-afac-bfdffad2f6f066c060
+  version: 58d9408f11

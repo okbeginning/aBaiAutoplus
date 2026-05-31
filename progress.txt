@@ -1,0 +1,155 @@
+PayPal $0 Trial 协议化进展记录
+=================================
+
+## 当前协议链状态（截至 2026-05-24，OTP 子链完成）
+
+| stage | 状态 | 备注 |
+|---|---|---|
+| stripe_checkout (init / methods / confirm) | ✅ 通过 | curl_cffi + Firefox135 + 代理 |
+| paypal_approve | ✅ 通过 | csrf / sessionID / ba_token / ec_token 全抽到 |
+| paypal_signup | ✅ 通过 / OTP 子链完整 | 见下"OTP 子链"章节 |
+| paypal_authorize (cardTypes + authorize) | ✅ 通过 | x-paypal-internal-euat / x-csrf-token / PayPal-Nsid / x-app-name |
+| stripe_poll | ✅ 通过 | Stripe 轮询收尾 |
+
+## OTP 子链（PHONE_CONFIRMATION_REQUIRED 兜底）
+
+PayPal 风控对 guest SignUp 强制电话验证。协议层完整实现 4 步子链：
+
+1. **detect** — paypal_signup 的首次 SignUp 响应里出现
+   `errors[0].message == "PHONE_CONFIRMATION_REQUIRED"`
+2. **initiate** — POST `/graphql?InitiateRiskBasedTwoFactorPhoneConfirmationMutation`
+   - body: {locale, phoneCountry, phoneNumber: 本地号 (剥 +1), token: ec_token}
+   - 响应给 authId / challengeId / state="PENDING"
+3. **poll relay_url** — 复用 `payment._fetch_ctf_relay_code` 从中转邮箱拉 6 位 PIN
+4. **confirm** — POST `/graphql?ConfirmRiskBasedTwoFactorPhoneConfirmationMutation`
+   - body: {authId, challengeId, pin, token}
+   - 响应 state="CONFIRMED" 即通过
+5. **重发 SignUp** — 同 body，PayPal 这次返回 ISSUER_DECLINE + accessToken (即 euat)
+
+### sms_pool 轮换
+
+stage 在重发 SignUp 收到 `OAS_ERROR` (createMemberAccount 风控) 时
+自动切换 `state.sms_pool[i+1]` 重试，直到拿到 token / 池子用尽 / 出现非 OAS 错误。
+
+## 关键修复历史（按时序）
+
+1. fail-fast：协议失败不再回落 camoufox（plugin.py）
+2. TLS 修复：curl_cffi Session(impersonate=..., proxy=...) 必须构造时传入
+3. Referer 修复：pm-redirects 必须 `https://pay.openai.com/`，错填 403
+4. 浏览器指纹：必须 firefox135，chrome 系列对 pm-redirects 403
+5. 字段名兼容：paypal SPA 用 `x-csrf-token` / `PayPal-Nsid` / `_sessionID=` URL query
+6. 转义引号：SSR HTML 里 token 在 `\"key\":\"value\"` 形态（React server component）
+7. ec_token HTML 兜底：final_url 不带 token 时从 SSR `"ecToken":"EC-XXX"` 抽
+8. SignUp 表单提交：构造 7KB GraphQL body（card / phone / billingAddress / token）
+9. 卡号随机化：替代固定 4800810957155811，用 luhn-valid 16 位 VISA 多 BIN 池
+10. OTP 子链：detect → initiate → poll → confirm → 重发 SignUp 完整闭环
+11. 号码池轮换：OAS_ERROR 触发后自动切换 sms_pool[i+1]
+
+## 测试覆盖
+
+- `tests/test_paypal_http.py`: 50 条单测覆盖 build/post/parse 6 个 OTP helpers + 之前的 SignUp helpers
+- `tests/test_chatgpt_payment_protocol.py`: 167 条单测覆盖 ProtoState + 5 stages + OTP 子链 happy path + OAS 重试 + 号码池轮换 + Luhn / fake card 生成
+
+测试套件全部通过（217 passed）。
+
+## 残留问题
+
+PayPal **OAS_ERROR**（createMemberAccount 风控）：当 sms_pool 中的号码已被
+PayPal 标记（同号反复尝试 / 同 BIN 段 / 同源 IP），重发 SignUp 即使 OTP 通过
+也会返回 OAS_ERROR。这**不是协议层缺陷**，是号码池资源耗尽：
+
+- 实测 4 条号 (5822057xxx / 5822064xxx，同源 mail-api.yuecheng.shop) 全 OAS
+- 每次 OTP 失败的号码会进入风控冷却期（数小时-数天）
+- 解决方案：用户提供未在最近用过的全新号码池
+
+## 工具
+
+- `tools/_retry_protocol.py`: 触发 task 并轮询结果
+- `tools/_inspect_landing.py`: 落地 HTML token 探测
+- `tools/_dump_entry.py`: HAR entry 详情
+- `tools/captures/`: 协议失败时自动 dump JSON 响应
+
+## 2026-05-26 后续修复（待验证 / 进行中）
+
+### Stripe checkout 三处修复（已完成 + 单测覆盖）
+
+1. **Stripe `checkout_amount_mismatch`** — 提交 tax_region 后从响应重抽
+   `expected_amount`，避免税务调整导致 /confirm 金额校验失败
+   （`platforms/chatgpt/stripe_checkout_step.py` `submit_tax_region`
+   + `parse_stripe_init_response`）
+
+2. **Stripe `payment_method_types_mismatch`** — `extract_paypal_redirect_url`
+   兼容 `payment_intent` 与 `setup_intent` 两种返回结构
+   （HAR 实采 trial 用 SetupIntent，但非 trial 用 PaymentIntent）
+
+3. **Stripe `/confirm` 通过** — `pa_nonce_XXX` redirect URL 实际拿到，
+   日志：`拿到 PayPal redirect URL（截断）: https://pm-redirects.stripe.com/...`
+
+### PayPal OTP 子链根因定位（修复实现，未经端到端验证）
+
+#### 现象
+
+`task_1779685723764` 完整链跑到 OTP 子链：
+- ✅ paypal_approve 通过 (`ba_token` / `ec_token` / `csrf` / `nsid` 全抽到)
+- ✅ OTP_INITIATE 通过（PayPal 真发 SMS，`state=PENDING`，`authId/challengeId` 拿到）
+- ✅ Relay 拉到 6 位 OTP pin
+- ❌ **OTP_CONFIRM 失败** `state='' first_error='PHONE_CONFIRMATION_NOT_INITIATED'`
+
+#### 根因（HAR 实采 entry 479 / 505 反推）
+
+PayPal weasley SDK 加载完成时会 POST 一次
+`/xoplatform/logger/api/logger/`，响应 `Set-Cookie:
+tsrce=checkoutuinodeweb_weasley`。这条 cookie 是 **OTP_CHALLENGE /
+OTP_INITIATE / OTP_CONFIRM 三个请求被识别为合法 weasley fetch 的关键**。
+
+协议模式直接调 OTP_CHALLENGE → 缺这条 cookie → PayPal 返回 HTML pa.js 容器
+（`text/html; charset=utf-8`），客户端 JSONDecodeError 之外，**PayPal 服务端
+不会建立 OTP fraud session**。OTP_INITIATE 看起来"成功"（state=PENDING + 真
+发 SMS），但 OTP_CONFIRM 时 PayPal 按 fraud session 反查找不到 →
+`PHONE_CONFIRMATION_NOT_INITIATED`。
+
+#### 修复实现
+
+- `platforms/chatgpt/paypal_http.py` 加 `paypal_post_weasley_logger`
+  函数，POST `/xoplatform/logger/api/logger/`、`x-app-name=checkoutuinodeweb_weasley`，
+  HAR 1:1 复刻 metric body。非阻塞契约：失败返回 False，不抛。
+- `platforms/chatgpt/payment_protocol.py` `paypal_signup_otp_subchain`
+  开头插入一次 `paypal_post_weasley_logger` 调用，写入 `tsrce` cookie。
+- `tests/test_paypal_http.py` 加 3 个回归单测（endpoint / x-app-name /
+  非阻塞契约 5xx + 网络异常）。`pytest -q` 全部通过（53 passed）。
+
+#### 验证状态
+
+未端到端验证：连续 2 次新任务被 PayPal 反爬阻挡：
+- `task_1779686494059`：`paypal_approve` 阶段 HTTP 403 datadome challenge
+  （response body 是 datadome JS challenge）
+- `task_1779686964441`：Stripe `/init` curl_cffi `(35) TLS connect error`
+
+两者都是 PayPal 服务端 IP 风控行为（datadome 频控 + 代理 IP 池被标记），
+不是代码 bug。需要等冷却（建议 30 分钟以上）或换更高质量的住宅代理。
+
+### 工具
+
+- `tools/inspect_har_entry_505_full.py`: HAR entry 505 OTP_CHALLENGE 完整
+  请求/响应 dump
+- `tools/inspect_har_otp_headers.py`: 比对 OTP_CHALLENGE / INITIATE /
+  CONFIRM / SIGNUP 4 个 endpoint 的 headers / cookies
+- `tools/inspect_har_otp_cookies.py`: 比对前后两次请求的 cookie 名清单
+- `tools/inspect_har_logger.py`: HAR entry 479 weasley logger 请求体 +
+  Set-Cookie 全量
+- `tools/inspect_har_tsrce_origin.py`: 扫 HAR 找出 `tsrce=checkoutuinodeweb_weasley`
+  cookie 是从哪个响应 Set-Cookie 来的
+- `tools/inspect_har_otp_nonce.py`: 扫 HAR 找 OTP_CHALLENGE 的 csrfNonce / ctxId
+  来源（结论：浏览器 SDK 内部生成，不依赖前序响应）
+
+### 下一步
+
+1. 等 30 分钟以上让 PayPal datadome 冷却（不要短时间内连续触发任务）
+2. 触发 1 次新任务，观察日志：
+   - 如果 paypal_approve 通过且看到 `[paypal_signup/otp] weasley logger 预热 成功`
+   - 然后 OTP_CHALLENGE 不再返回 HTML（不会写 `tools/captures/paypal_otp_challenge_rejected_*.json`）
+   - 最后 OTP_CONFIRM 返回 `state=CONFIRMED`
+   - 整链通过到 paypal_authorize 阶段
+3. 如果仍报 PHONE_CONFIRMATION_NOT_INITIATED，需要进一步调查
+   `paypal_get_approve` 落地后是否丢了某个 weasley SDK 应该建立的服务端状态。
+

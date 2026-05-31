@@ -1,0 +1,11 @@
+﻿.\.venv\Scripts\python.exe : Traceback (most recent call last):
+所在位置 行:1 字符: 1
++ .\.venv\Scripts\python.exe -c @"
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "<string>", line 7, in <module>
+    print(f'==== entry #{i} ({e[chr(34)+"request"+chr(34)][chr(34)+"url"+chr(34)].split(chr(63))[-1]}) ====')
+                              ~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyError: '"request"'
