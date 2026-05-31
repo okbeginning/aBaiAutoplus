@@ -100,6 +100,7 @@
 > 📸 _截图将随版本迭代持续更新。_
 
 ### QQ群交流
+点击链接加入群聊【GPT PLUS交流群aBaiAutoplus】：https://qm.qq.com/q/MfuBG14aI
 ![gopay注册生成gptplus](assets/screenshots/QQ群交流.jpg)
 
 ### gopay注册生成gptplus
