@@ -67,6 +67,7 @@ CTF_CITY = "Albany"
 CTF_STATE = "NY"
 CTF_STATE_NAME = "New York"
 CTF_POSTAL_CODE = "12207"
+CTF_DATE_OF_BIRTH = "09/05/1976"
 
 _CAMOUFOX_FINGERPRINT_LIMIT = 128
 _CAMOUFOX_FINGERPRINT_LOCK = threading.Lock()
@@ -3063,6 +3064,7 @@ def _generate_ctf_test_identity() -> dict:
         "state": CTF_STATE,
         "state_name": CTF_STATE_NAME,
         "postal_code": postal_code,
+        "date_of_birth": CTF_DATE_OF_BIRTH,
     }
 
 
@@ -3091,13 +3093,8 @@ def _apply_billing_profile_to_ctf_identity(identity: dict, billing_profile: Opti
         identity["last_name_kana"] = last_kana
         identity["jp_full_name"] = f"{last_kanji} {first_kanji}"
         identity["jp_full_name_kana"] = f"{last_kana} {first_kana}"
-        # PayPal 出生日期校验：>= 18 周岁。固定 1985-2000 年间，月份
-        # 1-12，日期 1-28（避免 2/29、4/31 这种非法日期）。格式 ``MM/DD/YYYY``
-        # 对齐 PayPal hosted ``#dateOfBirth`` 的输入掩码。
-        year = 1985 + secrets.randbelow(15)
-        month = 1 + secrets.randbelow(12)
-        day = 1 + secrets.randbelow(28)
-        identity["date_of_birth"] = f"{month:02d}/{day:02d}/{year:04d}"
+        # CTF 页只需要一个合法成年生日，固定值能减少 PayPal mask 的随机形态。
+        identity["date_of_birth"] = CTF_DATE_OF_BIRTH
         # 把 JP 姓名也写入通用字段，让既有 ``#firstName`` / ``#lastName``
         # selector 直接命中（CTF sandbox 用 US 名时这两个字段也是同名走
         # 同一 fill 链路，只是值会被改成日文）。
@@ -5126,13 +5123,12 @@ def _wait_and_type_dob_by_id(
     """专治 PayPal hosted ``#dateOfBirth`` 的 mask 输入框。
 
     这个字段是 ``type=tel`` + 输入掩码（react-imask 之类）的受控组件，模板
-    是 ``MM/DD/YYYY``。用 JS setter 强写完整字符串会被 mask 在 input 事件
-    里重新解析，常见结果是只保留前 6 字符（``10/09/1985`` → ``10/09/19``），
-    导致 ``aria-invalid=true``。
+    是 ``MM/DD/YYYY``。当前 PayPal mask 对逐键输入不稳定：纯数字可能变成
+    ``0615/1/9``，逐键输入带斜杠又可能变成 ``11/2/4``。
 
-    可靠做法是模拟真实键入：focus → 全选清空 → 输入 ``MM/DD/YYYY``。早先
-    版本输入纯数字并依赖 mask 自动插入 ``/``，但新版 PayPal 表单会把
-    ``06151990`` 重排成 ``0615/1/9``，所以这里明确键入带斜杠的文本。
+    GuJumpgate 的做法是先走 React-compatible native setter + ``input/change``
+    事件；这里也优先按这个方式直写并验证，失败时再用 ``keyboard.insert_text``
+    一次性插入，最后才退回逐键 ``type``。
     """
     eid = str(element_id or "").strip()
     if not eid:
@@ -5153,19 +5149,8 @@ def _wait_and_type_dob_by_id(
       return String(el.value == null ? '' : el.value);
     }
     """
-    expected_lengths = (10,)  # MM/DD/YYYY
-    for i in range(max(int(attempts), 1)):
-        try:
-            cur = page.evaluate(check_script, eid)
-        except Exception:
-            cur = "__noel__"
-        if cur == "__noel__":
-            try:
-                page.wait_for_timeout(int(interval_ms))
-            except Exception:
-                time.sleep(interval_ms / 1000)
-            continue
-        # 元素已在：聚焦 → 全选清空 → 逐字符敲入
+
+    def _focus_and_clear_dob() -> None:
         try:
             loc = page.locator(f"#{eid}").first
             loc.click()
@@ -5179,27 +5164,74 @@ def _wait_and_type_dob_by_id(
             page.keyboard.press("Delete")
         except Exception:
             pass
+
+    candidates = _paypal_dob_input_candidates(dob_value)
+    for i in range(max(int(attempts), 1)):
         try:
-            # 直接输入带斜杠的 MM/DD/YYYY，避免当前 PayPal mask 把纯数字重排坏。
-            page.keyboard.type(dob_value, delay=40)
+            cur = page.evaluate(check_script, eid)
         except Exception:
+            cur = "__noel__"
+        if cur == "__noel__":
             try:
-                loc = page.locator(f"#{eid}").first
-                loc.type(dob_value, delay=40)
+                page.wait_for_timeout(int(interval_ms))
+            except Exception:
+                time.sleep(interval_ms / 1000)
+            continue
+        if _paypal_dob_value_matches(cur, dob_value):
+            return True
+
+        for candidate in candidates:
+            after = _force_fill_dob_input_by_id(page, eid, candidate, log=log)
+            if _paypal_dob_value_matches(after, dob_value):
+                if callable(log):
+                    log(f"  · #{eid} 已 JS 设值 DOB ✓ ({after})")
+                return True
+            if after not in (None, "", "__noel__") and callable(log):
+                log(f"  · #{eid} DOB JS 设值后值为 {after!r}，继续尝试")
+
+        # 元素已在：聚焦 → 全选清空 → 一次性插入。insert_text 比逐键 type
+        # 更不容易被 masked input 把斜杠当成用户按键后重排。
+        for candidate in candidates:
+            _focus_and_clear_dob()
+            try:
+                page.keyboard.insert_text(candidate)
+            except Exception:
+                continue
+            try:
+                page.keyboard.press("Tab")
             except Exception:
                 pass
-        try:
-            page.keyboard.press("Tab")
-        except Exception:
-            pass
-        try:
-            after = page.evaluate(check_script, eid)
-        except Exception:
-            after = ""
-        if isinstance(after, str) and len(after) in expected_lengths and re.fullmatch(r"\d{2}/\d{2}/\d{4}", after or ""):
-            if callable(log):
-                log(f"  · #{eid} 已键入 DOB ✓ ({after})")
-            return True
+            try:
+                after = page.evaluate(check_script, eid)
+            except Exception:
+                after = ""
+            if _paypal_dob_value_matches(after, dob_value):
+                if callable(log):
+                    log(f"  · #{eid} 已插入 DOB ✓ ({after})")
+                return True
+        for candidate in candidates:
+            _focus_and_clear_dob()
+            try:
+                # 最后的兼容 fallback：逐键输入候选格式。
+                page.keyboard.type(candidate, delay=40)
+            except Exception:
+                try:
+                    loc = page.locator(f"#{eid}").first
+                    loc.type(candidate, delay=40)
+                except Exception:
+                    pass
+            try:
+                page.keyboard.press("Tab")
+            except Exception:
+                pass
+            try:
+                after = page.evaluate(check_script, eid)
+            except Exception:
+                after = ""
+            if _paypal_dob_value_matches(after, dob_value):
+                if callable(log):
+                    log(f"  · #{eid} 已键入 DOB ✓ ({after})")
+                return True
         if callable(log):
             log(f"  · #{eid} 键入 DOB 后值为 {after!r}，重试")
         try:
@@ -5209,6 +5241,65 @@ def _wait_and_type_dob_by_id(
     if callable(log):
         log(f"  · #{eid} 多次重试仍未填上 DOB")
     return False
+
+
+def _is_complete_paypal_dob_value(value: object) -> bool:
+    return isinstance(value, str) and re.fullmatch(r"\d{2}/\d{2}/\d{4}", value or "") is not None
+
+
+def _paypal_dob_input_candidates(dob_value: str) -> list[str]:
+    normalized = _normalize_paypal_dob_value(dob_value)
+    if not normalized:
+        return [str(dob_value or "")]
+    month, day, year = normalized.split("/")
+    return list(
+        dict.fromkeys(
+            [
+                normalized,
+                f"{month}{day}{year}",
+                f"{int(month)}/{int(day)}/{year}",
+            ]
+        )
+    )
+
+
+def _paypal_dob_value_matches(actual: object, expected: str) -> bool:
+    normalized_actual = _normalize_paypal_dob_value(str(actual or ""))
+    normalized_expected = _normalize_paypal_dob_value(expected)
+    return bool(normalized_actual and normalized_expected and normalized_actual == normalized_expected)
+
+
+def _force_fill_dob_input_by_id(page, element_id: str, value: str, *, log=None) -> str:
+    """GuJumpgate-style DOB fill: native input value setter + input/change events."""
+    eid = str(element_id or "").strip()
+    dob_value = str(value or "").strip()
+    if not eid or not dob_value:
+        return ""
+    script = """
+    (args) => {
+      const { id, value } = args;
+      const el = document.getElementById(id);
+      if (!el) return 'no_element';
+      if (el.disabled || el.getAttribute('aria-disabled') === 'true') return 'disabled';
+      const proto = window.HTMLInputElement && window.HTMLInputElement.prototype;
+      const setter = proto && Object.getOwnPropertyDescriptor(proto, 'value')
+        && Object.getOwnPropertyDescriptor(proto, 'value').set;
+      try { el.focus(); } catch (e) {}
+      if (setter) setter.call(el, value); else el.value = value;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+      return 'ok:' + String(el.value || '');
+    }
+    """
+    try:
+        result = page.evaluate(script, {"id": eid, "value": dob_value})
+    except Exception as exc:
+        if callable(log):
+            log(f"  · #{eid} DOB JS 设值异常: {exc}")
+        return ""
+    if isinstance(result, str) and result.startswith("ok:"):
+        return result[3:]
+    return str(result or "")
 
 
 def _normalize_paypal_dob_value(value: str) -> str:
@@ -5395,7 +5486,7 @@ def _fill_paypal_unified_guest_form(page, identity: dict, *, log: Callable[[str]
 
     # 5) 生年月日（懒加载段，需等渲染）。这个字段带 mask 模板，用 JS setter
     # 强写会被 mask 截断（``10/09/1985`` → ``10/09/19``），改成模拟键盘输入。
-    dob = str(identity.get("date_of_birth") or "")
+    dob = CTF_DATE_OF_BIRTH
     if dob:
         _wait_and_type_dob_by_id(page, "dateOfBirth", dob, log=log_fn)
 
@@ -5437,7 +5528,7 @@ def _fill_paypal_unified_guest_form(page, identity: dict, *, log: Callable[[str]
         ("billingLine1", line1),
         ("billingLine2", line2),
         ("password", password),
-        ("dateOfBirth", _normalize_paypal_dob_value(str(identity.get("date_of_birth") or ""))),
+        ("dateOfBirth", CTF_DATE_OF_BIRTH),
     ] + name_pairs
     check_value_script = """
     (id) => {
@@ -5856,8 +5947,7 @@ def _fill_ctf_payment_form(page, identity: dict, *, log: Callable[[str], None] |
         # 的输入掩码即便 JP 区也走美式 M/D/YYYY 布局）
         _fill_checkout_field(
             page,
-            _normalize_paypal_dob_value(str(identity.get("date_of_birth") or ""))
-            or str(identity.get("date_of_birth") or ""),
+            CTF_DATE_OF_BIRTH,
             selectors=(
                 '#dateOfBirth',
                 'input[name="dateOfBirth"]',
@@ -5950,7 +6040,7 @@ def _fill_ctf_payment_form(page, identity: dict, *, log: Callable[[str], None] |
                 "PayPal hosted JP 专属字段填写完毕："
                 f"姓={identity.get('last_name_kanji', '?')}({identity.get('last_name_kana', '?')}) "
                 f"名={identity.get('first_name_kanji', '?')}({identity.get('first_name_kana', '?')}) "
-                f"DOB={identity.get('date_of_birth', '?')}"
+                f"DOB={CTF_DATE_OF_BIRTH}"
             )
 
 

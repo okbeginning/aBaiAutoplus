@@ -504,6 +504,7 @@ def test_generate_ctf_test_identity_uses_natural_random_values():
     assert re.search(r"[A-Za-z]", identity["address_line1"])
     assert identity["city"]
     assert identity["postal_code"]
+    assert identity["date_of_birth"] == payment_module.CTF_DATE_OF_BIRTH
 
 
 def test_hold_checkout_browser_exits_early_when_cancel_requested(monkeypatch):
@@ -8033,6 +8034,250 @@ def test_wait_and_type_dob_uses_formatted_text_when_digit_mask_misgroups():
     assert state["value"] == "06/15/1990"
 
 
+def test_wait_and_type_dob_uses_insert_text_when_slashes_confuse_mask():
+    state = {"value": "", "typed": [], "inserted": []}
+
+    class FakeKeyboard:
+        def press(self, key):
+            if key == "Delete":
+                state["value"] = ""
+
+        def type(self, text, delay=0):
+            state["typed"].append(text)
+            if text == "11/24/1990":
+                state["value"] = "11/2/4"
+
+        def insert_text(self, text):
+            state["inserted"].append(text)
+            if text == "11/24/1990":
+                state["value"] = "11/24/1990"
+
+    class FakeLocator:
+        first = None
+
+        def __init__(self):
+            self.first = self
+
+        def click(self):
+            pass
+
+    class FakePage:
+        keyboard = FakeKeyboard()
+
+        def evaluate(self, script, arg=None):
+            if "document.getElementById" in script:
+                return state["value"]
+            return None
+
+        def locator(self, selector):
+            return FakeLocator()
+
+        def wait_for_timeout(self, timeout):
+            pass
+
+    assert payment_module._wait_and_type_dob_by_id(
+        FakePage(),
+        "dateOfBirth",
+        "11/24/1990",
+        attempts=1,
+        interval_ms=0,
+        log=lambda _m: None,
+    ) is True
+    assert state["inserted"] == ["11/24/1990"]
+    assert state["typed"] == []
+    assert state["value"] == "11/24/1990"
+
+
+def test_wait_and_type_dob_prefers_gujumpgate_style_js_setter():
+    state = {"value": "", "typed": [], "inserted": [], "js_sets": []}
+
+    class FakeKeyboard:
+        def press(self, key):
+            pass
+
+        def type(self, text, delay=0):
+            state["typed"].append(text)
+
+        def insert_text(self, text):
+            state["inserted"].append(text)
+
+    class FakeLocator:
+        first = None
+
+        def __init__(self):
+            self.first = self
+
+        def click(self):
+            pass
+
+    class FakePage:
+        keyboard = FakeKeyboard()
+
+        def evaluate(self, script, arg=None):
+            if isinstance(arg, dict) and arg.get("id") == "dateOfBirth":
+                value = str(arg.get("value") or "")
+                state["js_sets"].append(value)
+                state["value"] = value
+                return f"ok:{value}"
+            if "document.getElementById" in script:
+                return state["value"]
+            return None
+
+        def locator(self, selector):
+            return FakeLocator()
+
+        def wait_for_timeout(self, timeout):
+            pass
+
+    assert payment_module._wait_and_type_dob_by_id(
+        FakePage(),
+        "dateOfBirth",
+        "1990/11/24",
+        attempts=1,
+        interval_ms=0,
+        log=lambda _m: None,
+    ) is True
+    assert state["js_sets"] == ["11/24/1990"]
+    assert state["inserted"] == []
+    assert state["typed"] == []
+    assert state["value"] == "11/24/1990"
+
+
+def test_wait_and_type_dob_tries_compact_digits_when_mask_truncates_slashes():
+    state = {"value": "", "inserted": [], "js_sets": [], "typed": []}
+
+    class FakeKeyboard:
+        def press(self, key):
+            if key == "Delete":
+                state["value"] = ""
+
+        def insert_text(self, text):
+            state["inserted"].append(text)
+            if text == "07/27/1990":
+                state["value"] = "07/2/7"
+            elif text == "07271990":
+                state["value"] = "07/27/1990"
+
+        def type(self, text, delay=0):
+            state["typed"].append(text)
+
+    class FakeLocator:
+        first = None
+
+        def __init__(self):
+            self.first = self
+
+        def click(self):
+            pass
+
+    class FakePage:
+        keyboard = FakeKeyboard()
+
+        def evaluate(self, script, arg=None):
+            if isinstance(arg, dict) and arg.get("id") == "dateOfBirth":
+                value = str(arg.get("value") or "")
+                state["js_sets"].append(value)
+                if value == "07/27/1990":
+                    state["value"] = "07/2/7"
+                elif value == "07271990":
+                    state["value"] = "07/27/1990"
+                else:
+                    state["value"] = value
+                return f"ok:{state['value']}"
+            if "document.getElementById" in script:
+                return state["value"]
+            return None
+
+        def locator(self, selector):
+            return FakeLocator()
+
+        def wait_for_timeout(self, timeout):
+            pass
+
+    assert payment_module._wait_and_type_dob_by_id(
+        FakePage(),
+        "dateOfBirth",
+        "07/27/1990",
+        attempts=1,
+        interval_ms=0,
+        log=lambda _m: None,
+    ) is True
+    assert state["js_sets"] == ["07/27/1990", "07271990"]
+    assert state["inserted"] == []
+    assert state["typed"] == []
+    assert state["value"] == "07/27/1990"
+
+
+def test_wait_and_type_dob_refocuses_before_each_keyboard_candidate():
+    state = {
+        "active": "dateOfBirth",
+        "values": {"dateOfBirth": "", "firstName": "", "lastName": ""},
+        "inserted": [],
+    }
+
+    class FakeKeyboard:
+        def press(self, key):
+            if key == "Delete":
+                state["values"][state["active"]] = ""
+            elif key == "Tab":
+                if state["active"] == "dateOfBirth":
+                    state["active"] = "firstName"
+                elif state["active"] == "firstName":
+                    state["active"] = "lastName"
+
+        def insert_text(self, text):
+            state["inserted"].append((state["active"], text))
+            if state["active"] == "dateOfBirth" and text == "09/05/1976":
+                state["values"]["dateOfBirth"] = "09/05/19"
+            elif state["active"] == "dateOfBirth" and text == "09051976":
+                state["values"]["dateOfBirth"] = "09/05/1976"
+            else:
+                state["values"][state["active"]] = text
+
+        def type(self, text, delay=0):
+            state["values"][state["active"]] = text
+
+    class FakeLocator:
+        first = None
+
+        def __init__(self):
+            self.first = self
+
+        def click(self):
+            state["active"] = "dateOfBirth"
+
+    class FakePage:
+        keyboard = FakeKeyboard()
+
+        def evaluate(self, script, arg=None):
+            if isinstance(arg, dict) and arg.get("id") == "dateOfBirth":
+                state["values"]["dateOfBirth"] = "09/05/19"
+                return f"ok:{state['values']['dateOfBirth']}"
+            if "document.getElementById" in script:
+                key = str(arg or "")
+                return state["values"].get(key, "__noel__")
+            return None
+
+        def locator(self, selector):
+            return FakeLocator()
+
+        def wait_for_timeout(self, timeout):
+            pass
+
+    assert payment_module._wait_and_type_dob_by_id(
+        FakePage(),
+        "dateOfBirth",
+        payment_module.CTF_DATE_OF_BIRTH,
+        attempts=1,
+        interval_ms=0,
+        log=lambda _m: None,
+    ) is True
+    assert state["values"]["dateOfBirth"] == payment_module.CTF_DATE_OF_BIRTH
+    assert state["values"]["firstName"] == ""
+    assert state["values"]["lastName"] == ""
+    assert all(target == "dateOfBirth" for target, _value in state["inserted"])
+
+
 def test_fill_ctf_payment_form_fills_both_kanji_and_kana_names_for_jp():
     """JP 区统一 guest 表单：漢字组(#firstName/#lastName) 和片假名组
     (#countrySpecificFirstName/#countrySpecificLastName) 都要分别填对。"""
@@ -8219,7 +8464,7 @@ def test_fill_ctf_payment_form_fills_both_kanji_and_kana_names_for_jp():
     assert fills.get("kanji_last") == "清水"
     assert fills.get("kana_first") == "アイリ"
     assert fills.get("kana_last") == "シミズ"
-    assert fills.get("dob") == "11/08/1993"
+    assert fills.get("dob") == payment_module.CTF_DATE_OF_BIRTH
 
 
 def test_fill_checkout_field_selects_hidden_native_select_via_js():
