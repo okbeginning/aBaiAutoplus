@@ -8,6 +8,9 @@ version = "0.2.0"
 requires-python = ">=3.11"
 dependencies = [
     "tls_client>=1.0",
+    # GoPay App 纯协议（gopay_app_protocol.py）用 httpx.Client；socks extra
+    # 是走 socks5h 印尼代理过 WAF 的必需依赖，缺了报 "socks5h is not supported"。
+    "httpx[socks]>=0.27",
 ]
 
 [project.scripts]

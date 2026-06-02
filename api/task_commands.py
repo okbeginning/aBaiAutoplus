@@ -85,6 +85,11 @@ class GoPayPayChatGptTaskRequest(BaseModel):
     # GoPay 号来源开关：auto（先池后注册）/ pool（只用号池，没号失败）/
     # register（强制现注册新号，忽略号池/指定号）。
     gopay_source: str = "auto"
+    # 调试抓包开关：开启后抓到 midtrans_url 不关浏览器，停在付款页让人工手动
+    # 走完 GoPay 网页付款，全程录 HAR + dump 每页 HTML，不跑协议付款。
+    capture_payment: bool = False
+    # 抓包产物目录（可选）；留空则用工作目录下 _gopay_capture/<时间戳>/。
+    capture_dir: str = ""
 
 
 @router.post("/register")

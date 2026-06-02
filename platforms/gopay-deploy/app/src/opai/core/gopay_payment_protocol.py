@@ -45,6 +45,19 @@ PIN_CLIENT_LINKING = "51b5f09a-3813-11ee-be56-0242ac120002-MGUPA"
 PIN_CLIENT_PAYMENT = "47180a8e-f56e-11ed-a05b-0242ac120003-GWC"
 
 
+def _tls_proxy(proxy: str) -> str:
+    """把 ``socks5h://`` 归一成 ``socks5://`` 供 tls_client 使用。
+
+    tls_client 的 Go 后端不支持 ``socks5h`` scheme，会报
+    "scheme socks5h is not supported"。socks5 在它下面默认远程 DNS，等价。
+    其它 scheme（http/https/socks5）原样返回。
+    """
+    p = str(proxy or "").strip()
+    if p.lower().startswith("socks5h://"):
+        return "socks5://" + p[len("socks5h://"):]
+    return p
+
+
 class GoPayPaymentError(Exception):
     pass
 
@@ -59,6 +72,11 @@ class GoPayPayment:
     def __init__(self, proxy: str = ""):
         self._session = tls_client.Session(client_identifier="chrome_120")
         if proxy:
+            # tls_client（Go 后端）只认 ``socks5://``，不认 ``socks5h://``
+            # （会报 "scheme socks5h is not supported"）。注册侧用 httpx 需要
+            # socks5h（远程 DNS），付款侧用 tls_client 这里归一成 socks5。
+            # socks5 在 tls_client 下默认也走远程 DNS，等价可用。
+            proxy = _tls_proxy(proxy)
             self._session.proxies = {"http": proxy, "https": proxy}
         self._headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",

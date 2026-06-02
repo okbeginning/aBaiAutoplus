@@ -7958,6 +7958,90 @@ def _grab_midtrans_from_ready_page(
     )
 
 
+def _gopay_capture_dir() -> str:
+    """调试抓包目录：设了 ``OPAI_GOPAY_CAPTURE_DIR`` 就开启 HAR + HTML 抓取。
+
+    开启后 ``select_gopay_and_grab_midtrans`` 抓到 midtrans_url 不关浏览器，
+    停在付款页让人工走完整付款流程，全程录 HAR + 周期 dump 每个页面 HTML。
+    """
+    return str(os.environ.get("OPAI_GOPAY_CAPTURE_DIR", "") or "").strip()
+
+
+def _dump_all_pages_html(context, capture_dir: str, seen: set, counter: list, log) -> None:
+    """把当前所有打开页面的 HTML dump 到 capture_dir，按 (url, html-hash) 去重。"""
+    try:
+        pages = list(getattr(context, "pages", []) or [])
+    except Exception:
+        pages = []
+    for pg in pages:
+        try:
+            url = str(pg.url or "")
+            html = pg.content()
+        except Exception:
+            continue
+        h = hashlib.sha256((url + "\n" + html).encode("utf-8", "ignore")).hexdigest()
+        if h in seen:
+            continue
+        seen.add(h)
+        counter[0] += 1
+        idx = counter[0]
+        ts = time.strftime("%H%M%S")
+        # 文件名带序号+时间+url 主机/路径片段，方便对着 HAR 看
+        try:
+            u = urlparse(url)
+            tag = (u.netloc + u.path).replace("/", "_").replace(":", "_")[:60] or "page"
+        except Exception:
+            tag = "page"
+        fname = f"{idx:03d}_{ts}_{tag}.html"
+        try:
+            Path(capture_dir, fname).write_text(html, encoding="utf-8")
+            # 同时存一份 url 映射
+            with open(Path(capture_dir, "pages_index.txt"), "a", encoding="utf-8") as fh:
+                fh.write(f"{fname}\t{url}\n")
+            log(f"[capture] dump HTML #{idx}: {url[:90]}")
+        except Exception as exc:
+            log(f"[capture] dump HTML 失败: {exc}")
+
+
+def _manual_capture_loop(context, page, capture_dir: str, *, max_minutes: int, log) -> None:
+    """人工付款抓包循环。
+
+    停止条件（任一）：``capture_dir/STOP`` 文件出现 / 超过 max_minutes /
+    所有页面关闭。期间每 3 秒扫一遍所有打开页面 dump HTML（去重），HAR 由
+    context 关闭时落盘。
+    """
+    Path(capture_dir).mkdir(parents=True, exist_ok=True)
+    stop_file = Path(capture_dir, "STOP")
+    log(
+        "================ HAR/HTML 抓包模式已开启 ================\n"
+        f"[capture] 浏览器保持打开，请在浏览器里手动走完 GoPay 网页付款全流程。\n"
+        f"[capture] 全程录 HAR + 自动 dump 每个页面 HTML 到: {capture_dir}\n"
+        f"[capture] 完成后：在该目录下新建一个名为 STOP 的空文件即可结束抓包并落盘 HAR。\n"
+        f"[capture] 或者最多等 {max_minutes} 分钟自动结束。\n"
+        "========================================================"
+    )
+    seen: set = set()
+    counter = [0]
+    deadline = time.time() + max(int(max_minutes or 20), 1) * 60
+    while time.time() < deadline:
+        if stop_file.exists():
+            log("[capture] 检测到 STOP 文件，结束抓包")
+            break
+        try:
+            if not list(getattr(context, "pages", []) or []):
+                log("[capture] 所有页面已关闭，结束抓包")
+                break
+        except Exception:
+            pass
+        _dump_all_pages_html(context, capture_dir, seen, counter, log)
+        time.sleep(3)
+    else:
+        log(f"[capture] 已达最长 {max_minutes} 分钟，结束抓包")
+    # 最后再 dump 一轮，确保抓到最终页
+    _dump_all_pages_html(context, capture_dir, seen, counter, log)
+    log(f"[capture] HTML 抓取完成，共 {counter[0]} 个快照；关闭浏览器将落盘 HAR")
+
+
 def select_gopay_and_grab_midtrans(
     cashier_url: str,
     *,
@@ -7965,15 +8049,24 @@ def select_gopay_and_grab_midtrans(
     proxy: Optional[str] = None,
     timeout_seconds: int = 300,
     cancel_check: Optional[Callable[[], bool]] = None,
+    capture_dir: str = "",
     log: Callable[[str], None] = print,
 ) -> str:
     """启动浏览器（camoufox/bitbrowser）打开 cashier_url，自动选 GoPay 渠道、
     填账单、点订阅，抓跳转后的 Midtrans URL，关闭浏览器后返回。
 
     backend_config 为 None 时默认 camoufox headed。
+
+    调试抓包：传入 ``capture_dir``（或设环境变量 ``OPAI_GOPAY_CAPTURE_DIR``）
+    后，抓到 midtrans_url **不关浏览器**，开启 HAR 录制并停在付款页，让人工
+    手动走完 GoPay 网页付款全流程，全程 dump 每个页面 HTML。在该目录新建
+    ``STOP`` 文件结束抓包。
     """
     if backend_config is None:
         backend_config = BrowserBackendConfig.camoufox(headless=False)
+
+    # 抓包目录：优先用显式传入的 capture_dir（前端开关），否则回退环境变量。
+    capture_dir = str(capture_dir or "").strip() or _gopay_capture_dir()
 
     try:
         from camoufox.sync_api import Camoufox as _Camoufox
@@ -8001,6 +8094,25 @@ def select_gopay_and_grab_midtrans(
         f"window_mode={backend_config.window_mode}）"
     )
 
+    # 抓包模式：HAR 路径放在 capture_dir 下，context 创建时挂上录制。
+    # 注意：BitBrowser（CDP attach）下 Playwright 无法录 HAR（会被跳过），
+    # 这种后端只能拿到 HTML 快照；要 HAR 请用 camoufox_headed 模式跑抓包。
+    record_har_path = None
+    if capture_dir:
+        try:
+            Path(capture_dir).mkdir(parents=True, exist_ok=True)
+            record_har_path = str(Path(capture_dir, "midtrans_payment.har"))
+            log(f"[capture] 已启用 HAR 录制: {record_har_path}")
+            if backend_config.is_bitbrowser:
+                log(
+                    "[capture] ⚠ 当前是 BitBrowser 后端，CDP attach 下无法录 HAR，"
+                    "只会拿到页面 HTML 快照。要 HAR 请改用 camoufox_headed 模式重跑抓包。"
+                )
+        except Exception as exc:
+            log(f"[capture] HAR 目录创建失败，关闭抓包: {exc}")
+            capture_dir = ""
+            record_har_path = None
+
     browser_context = None
     try:
         browser_context, browser, page = _open_unique_camoufox_page(
@@ -8008,6 +8120,7 @@ def select_gopay_and_grab_midtrans(
             log=log,
             browser_timeout=browser_timeout_ms,
             max_attempts=3,
+            record_har_path=record_har_path,
             backend_config=backend_config,
         )
         # 并发启动 N 个 headed 浏览器时，profile 绑定的 SOCKS 代理会在同一
@@ -8042,7 +8155,7 @@ def select_gopay_and_grab_midtrans(
                 time.sleep(backoff)
         if last_nav_exc is not None:
             raise last_nav_exc
-        return _grab_midtrans_from_ready_page(
+        url = _grab_midtrans_from_ready_page(
             page,
             checkout_url=cashier_url,
             address=address,
@@ -8050,6 +8163,21 @@ def select_gopay_and_grab_midtrans(
             cancel_check=cancel_check,
             log=log,
         )
+        # 抓包模式：不关浏览器，确保停在 midtrans 付款页，人工走完整流程抓 HAR/HTML。
+        if capture_dir:
+            try:
+                cur = str(page.url or "")
+            except Exception:
+                cur = ""
+            if "midtrans.com" not in cur:
+                try:
+                    log(f"[capture] 导航到 midtrans 付款页: {url}")
+                    page.goto(url, wait_until="domcontentloaded", timeout=60_000)
+                except Exception as exc:
+                    log(f"[capture] 导航 midtrans 失败（可忽略，页面可能已自动跳转）: {exc}")
+            max_minutes = int(os.environ.get("OPAI_GOPAY_CAPTURE_MAX_MIN", "20") or "20")
+            _manual_capture_loop(browser_context, page, capture_dir, max_minutes=max_minutes, log=log)
+        return url
     finally:
         if browser_context is not None:
             try:

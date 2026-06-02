@@ -11,9 +11,10 @@ def test_grab_midtrans_accepts_checkout_mode_string(monkeypatch):
     并透传给 select_gopay_and_grab_midtrans。"""
     captured = {}
 
-    def fake_select(cashier_url, *, backend_config, proxy, timeout_seconds, cancel_check, log):
+    def fake_select(cashier_url, *, backend_config, proxy, timeout_seconds, capture_dir, cancel_check, log):
         captured["backend"] = backend_config.backend
         captured["window_mode"] = backend_config.window_mode
+        captured["capture_dir"] = capture_dir
         return "https://app.midtrans.com/snap/v4/redirection/abc12345-1234-1234-1234-123456789abc"
 
     from platforms.chatgpt import payment as payment_module
@@ -28,13 +29,14 @@ def test_grab_midtrans_accepts_checkout_mode_string(monkeypatch):
     assert url.startswith("https://app.midtrans.com/")
     assert captured["backend"] == "bitbrowser"
     assert captured["window_mode"] == "hidden"
+    assert captured["capture_dir"] == ""
 
 
 def test_grab_midtrans_default_camoufox(monkeypatch):
     """checkout_mode 缺省走 camoufox_headed。"""
     captured = {}
 
-    def fake_select(cashier_url, *, backend_config, proxy, timeout_seconds, cancel_check, log):
+    def fake_select(cashier_url, *, backend_config, proxy, timeout_seconds, capture_dir, cancel_check, log):
         captured["backend"] = backend_config.backend
         captured["window_mode"] = backend_config.window_mode
         return "https://app.midtrans.com/snap/v4/redirection/abc-uuid-1234"

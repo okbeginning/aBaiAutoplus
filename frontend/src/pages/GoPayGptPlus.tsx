@@ -115,6 +115,9 @@ export default function GoPayGptPlus() {
   const [herosmsApiKey, setHerosmsApiKey] = useState(
     "",
   );
+  // 调试抓包开关：开启后抓到 midtrans_url 不关浏览器，停在付款页让人工手动
+  // 走完 GoPay 网页付款，全程录 HAR + dump 每页 HTML，不跑协议付款。
+  const [capturePayment, setCapturePayment] = useState(false);
 
   const BROWSER_MODE_OPTIONS = [
     { value: "camoufox_headed", label: "Camoufox 前台" },
@@ -207,6 +210,7 @@ export default function GoPayGptPlus() {
         smspool_api_key: smspoolApiKey.trim(),
         smsbower_api_key: smsbowerApiKey.trim(),
         max_price: maxPrice.trim(),
+        capture_payment: capturePayment,
       };
       // 未选 ChatGPT 账号 → 从注册开始
       if (selectedChatgpt.size === 0) {
@@ -339,6 +343,27 @@ export default function GoPayGptPlus() {
               </p>
             </div>
           )}
+          <div className="md:col-span-4">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={capturePayment}
+                onChange={(e) => setCapturePayment(e.target.checked)}
+                className="h-4 w-4"
+              />
+              <span className="text-[var(--text)]">
+                调试抓包模式（抓到 midtrans 后不关浏览器，人工手动付款，录 HAR + 每页 HTML）
+              </span>
+            </label>
+            {capturePayment && (
+              <p className="mt-1 text-[11px] text-[var(--text-muted)] leading-tight">
+                开启后程序不跑协议付款：抓到 midtrans_url 会停在付款页，请手动走完 GoPay 网页付款全流程。
+                产物存到工作目录 <code>_gopay_capture/&lt;时间戳&gt;/</code>（HAR + 各页面 HTML）。
+                完成后在该目录新建一个名为 <code>STOP</code> 的空文件结束抓包。
+                <strong>要拿 HAR 请用 Camoufox 模式</strong>（BitBrowser CDP 录不了 HAR，只有 HTML）。
+              </p>
+            )}
+          </div>
           {selectedChatgpt.size === 0 && (
             <div>
               <label className="block mb-1">注册 ChatGPT 数量（未选账号时）</label>

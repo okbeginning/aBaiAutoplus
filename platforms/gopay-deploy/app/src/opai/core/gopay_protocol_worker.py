@@ -34,6 +34,29 @@ from .sms_helpers import (
 )
 from .gojek_client import GojekClient, CLIENT_ID as _GOJEK_CLIENT_ID, CLIENT_SECRET as _GOJEK_CLIENT_SECRET
 
+# 注册 + 设 PIN 已切换到 "GoPay App 纯协议"（com.gojek.gopay 2.10.0,
+# gopay:consumer:app）。GojekClient（gojek:consumer:app）仍保留给历史/付款
+# 代码引用，但 _register_one / _resume_account 走下面这套。
+from .gopay_app_protocol import (
+    GoPayProtocol,
+    GoPayAppClient,
+    EnhancedPythonXESigner,
+    build_device_profile,
+    has_error_code,
+    is_success_response,
+    is_waf_html,
+    is_phone_registered_error,
+    extract_account_id,
+    pick_first as _pick_first,
+    AUTH as _GP_AUTH,
+    API as _GP_API,
+    CUSTOMER as _GP_CUSTOMER,
+    AUTH_SECRET as _GP_AUTH_SECRET,
+    AUTH_ID as _GP_AUTH_ID,
+    SIGNUP_CLIENT_NAME as _GP_SIGNUP_CLIENT_NAME,
+    SIGNUP_BASIC_SUFFIX as _GP_SIGNUP_BASIC_SUFFIX,
+)
+
 from .envelope_manager import EnvelopeManager
 from .gopay_payment_protocol import GoPayPayment, GoPayFraudDenyError
 
@@ -175,13 +198,13 @@ ACCOUNTS_FILE = os.environ.get(
 _accounts_lock = threading.Lock()
 
 
-def _save_account(phone: str, local: str, pin: str, aid: str, client: GojekClient):
+def _save_account(phone: str, local: str, pin: str, aid: str, client):
     entry = {
         "phone": phone,
         "local": local,
         "pin": pin,
         "activation_id": aid,
-        "customer_id": client.user_uuid,
+        "customer_id": getattr(client, "user_uuid", ""),
         "access_token": client.auth.access_token,
         "refresh_token": client.auth.refresh_token,
         "registered_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -200,7 +223,7 @@ def _save_account(phone: str, local: str, pin: str, aid: str, client: GojekClien
     _inbox_push_account(phone, {**entry, "added_at": entry["registered_at"]})
 
 
-def _update_account_balance(phone: str, balance: int, client: GojekClient):
+def _update_account_balance(phone: str, balance: int, client):
     with _accounts_lock:
         accounts = []
         if os.path.exists(ACCOUNTS_FILE):
@@ -218,7 +241,7 @@ def _update_account_balance(phone: str, balance: int, client: GojekClient):
     log.info("[save] %s balance=%d updated locally", phone, balance)
 
 
-def _check_balance(client: GojekClient) -> int:
+def _check_balance(client) -> int:
     try:
         r = client.get_balance()
         if r["status"] == 200:
@@ -234,42 +257,172 @@ def _check_balance(client: GojekClient) -> int:
 # Register one GoPay account
 # ---------------------------------------------------------------------------
 
+_INDO_NAMES = [
+    "Budi Santoso", "Adi Pratama", "Siti Rahayu", "Dewi Lestari",
+    "Rizky Ramadhan", "Putri Wulandari", "Agus Setiawan", "Rina Kusuma",
+    "Hendra Wijaya", "Novi Anggraini", "Dian Permata", "Wahyu Hidayat",
+    "Fitri Handayani", "Joko Susilo", "Ratna Sari", "Bambang Prasetyo",
+    "Mega Puspita", "Eko Nugroho", "Sari Indah", "Yusuf Maulana",
+    "Lina Marlina", "Arief Rahman", "Wati Suryani", "Dedi Kurniawan",
+    "Ayu Lestari", "Rudi Hartono", "Nisa Fitriani", "Bayu Anggara",
+    "Sri Mulyani", "Fajar Setiadi", "Indra Gunawan", "Tika Rahmawati",
+]
+
+
+def _make_app_signer():
+    """构造 GoPay App 的 X-E1 签名器。
+
+    默认 enhanced（纯 Python，免 adb/Frida），与参考脚本默认一致。
+    可用环境变量 ``OPAI_GOPAY_XE_RESOLUTION_KEY`` 覆盖 HMAC key。
+    """
+    key = os.environ.get("OPAI_GOPAY_XE_RESOLUTION_KEY", "").strip()
+    if key:
+        return EnhancedPythonXESigner(resolution_key=key)
+    return EnhancedPythonXESigner()
+
+
+def _signup_with_variants(gp, local, full_name, country_code, verification_token):
+    """跑参考脚本里的 customer_signup 多组凭证轮试 + WAF 重试。
+
+    返回 ``(access_token, refresh_token, account_id, created_without_token,
+    last_error)``。任一变体被服务端接受即停。号已注册抛
+    ``_PhoneAlreadyRegistered``。
+    """
+    waf_retries = int(os.environ.get("OPAI_GOPAY_SIGNUP_WAF_RETRIES", "3"))
+    waf_sleep = float(os.environ.get("OPAI_GOPAY_SIGNUP_WAF_SLEEP", "2.0"))
+    variants = [
+        {
+            "label": "auth_id_authsecret_cc62_escaped",
+            "client_name": "gopay:consumer:app",
+            "client_secret": _GP_AUTH_SECRET,
+            "basic": _GP_SIGNUP_BASIC_SUFFIX,
+            "signed_up_country": "62",
+            "escape": True,
+        },
+        {
+            "label": "gopay_consumer_authsecret_cc62",
+            "client_name": _GP_SIGNUP_CLIENT_NAME,
+            "client_secret": _GP_AUTH_SECRET,
+            "basic": _GP_SIGNUP_BASIC_SUFFIX,
+            "signed_up_country": "62",
+            "escape": False,
+        },
+        {
+            "label": "gopay_consumer_authsecret_ID",
+            "client_name": _GP_SIGNUP_CLIENT_NAME,
+            "client_secret": _GP_AUTH_SECRET,
+            "basic": _GP_SIGNUP_BASIC_SUFFIX,
+            "signed_up_country": "ID",
+            "escape": False,
+        },
+    ]
+    access_token = refresh_token = None
+    account_id = None
+    created_without_token = False
+    last_error = None
+    for v in variants:
+        for waf_try in range(waf_retries + 1):
+            sc, data, _ = gp.customer_signup(
+                local, full_name, country_code=country_code,
+                verification_token=verification_token,
+                signup_client_name=v["client_name"],
+                signup_client_secret=v["client_secret"],
+                signup_basic=v["basic"],
+                signed_up_country=v["signed_up_country"],
+                escape_client_name_colon=v["escape"],
+            )
+            if not is_waf_html(sc, data) or waf_try >= waf_retries:
+                break
+            log.warning("customer_signup WAF 403, retry %d/%d", waf_try + 1, waf_retries)
+            time.sleep(waf_sleep)
+        last_error = {"status": sc, "data": data, "variant": v["label"]}
+        if is_phone_registered_error(data):
+            raise _PhoneAlreadyRegistered()
+        account_id = account_id or extract_account_id(data)
+        access_token = access_token or _pick_first(data, ["access_token", "accessToken"])
+        refresh_token = refresh_token or _pick_first(data, ["refresh_token", "refreshToken"])
+        if access_token or is_success_response(sc, data, allow=(200, 201, 202, 206)):
+            log.info("customer_signup accepted variant=%s access_token=%s", v["label"], bool(access_token))
+            if not access_token:
+                created_without_token = True
+            break
+    return access_token, refresh_token, account_id, created_without_token, last_error
+
+
+class _PhoneAlreadyRegistered(RuntimeError):
+    pass
+
+
 def _register_one(api_key: str, pin: str, proxy: str, envelope_did: str) -> Optional[dict]:
-    """Full registration flow: rent phone -> signup -> refresh -> PIN."""
+    """完整注册 + 设 PIN（GoPay App 纯协议, com.gojek.gopay 2.10.0）。
+
+    流程移植自 ``gopay-auto-protocol``（gopay:consumer:app + enhanced X-E1）：
+      租号 -> login_methods(确认新号) -> cvs signup OTP -> customer_signup
+      -> refresh 成正常 goto-auth session -> goto_pin_wa_sms 二次 OTP -> 设 PIN。
+    设备指纹复用主项目的 ``generate_device_identity(seed)``（同号同指纹）。
+    返回契约不变：``{phone, aid, pin, client, local}``。
+    """
     phone, aid = sms_get_number(api_key)
     if not phone:
         log.error("No phone number available")
         return None
 
     rented_at = time.time()
-    local = phone.lstrip("+")
+    country_code, local = "+62", phone.lstrip("+")
     if local.startswith("62"):
         local = local[2:]
 
     log.info("[%s] Proxy: %s", phone, proxy.split("@")[-1] if "@" in proxy else "direct")
-    client = GojekClient.from_phone(phone, proxy=proxy)
+
+    device = build_device_profile(phone)
+    gp = GoPayProtocol(
+        device=device,
+        signer=_make_app_signer(),
+        client_id=_GP_AUTH_ID,
+        client_secret=_GP_AUTH_SECRET,
+        debug=False,
+        proxy=proxy,
+    )
     success = False
 
     try:
-        # === Phase 1: Login check ===
+        # === Phase 1: login_methods —— 新号应返回 user:not_found ===
         time.sleep(2)
-        methods = api_call_with_retry(client.get_login_methods, "+62", local)
-
-        if methods["status"] in (200, 201):
+        sc, data, _ = gp.login_methods(local, country_code)
+        if has_error_code(data, "auth:error:user:not_found"):
+            # 新号，走 signup CVS。GoPay 把 methods->initiate->verify 当作同一
+            # 会话，必须共用一个 transaction-id，否则 initiate 报 invalid_parameter。
+            gp.new_cvs_session()
+            sc, data, _ = gp.cvs_methods(local, flow="signup", country_code=country_code)
+        elif sc in (200, 201, 202):
             log.info("[%s] Already registered, skipping", phone)
             return None
-
-        err_code = get_error_code(methods)
-        if methods["status"] == 403 or is_waf_block(methods):
+        elif is_waf_html(sc, data) or sc == 403:
             log.warning("[%s] WAF 403, need new proxy IP", phone)
             return None
 
-        # === Signup ===
-        log.info("[%s] New number -> signup", phone)
-        otp_result = client.signup_request_otp(phone)
-        if otp_result["status"] not in (200, 201):
-            log.error("[%s] Signup OTP failed: %d", phone, otp_result["status"])
+        if not is_success_response(sc, data):
+            log.error("[%s] cvs_methods/login_methods failed: HTTP %d %s", phone, sc, data)
             return None
+
+        verification_id = _pick_first(data, ["verification_id", "challenge_id"])
+        method = "otp_sms"
+        methods = _pick_first(data, ["methods"])
+        if isinstance(methods, list) and "otp_sms" not in methods and methods:
+            method = str(_pick_first(data, ["default_method"]) or methods[0])
+        if not verification_id:
+            log.error("[%s] no verification_id from cvs_methods", phone)
+            return None
+
+        # === Phase 2: cvs_initiate 触发注册 OTP ===
+        sc, data, _ = gp.cvs_initiate(local, str(verification_id), method=method, flow="signup", country_code=country_code)
+        if not is_success_response(sc, data, allow=(200, 201, 202, 204)):
+            if is_waf_html(sc, data) or sc == 403:
+                log.warning("[%s] WAF 403 on cvs_initiate, need new proxy IP", phone)
+            else:
+                log.error("[%s] cvs_initiate failed: HTTP %d %s", phone, sc, data)
+            return None
+        otp_token = _pick_first(data, ["otp_token", "otpToken"])
 
         otp = sms_wait_code(api_key, aid, timeout=180)
         if not otp:
@@ -277,116 +430,149 @@ def _register_one(api_key: str, pin: str, proxy: str, envelope_did: str) -> Opti
             return None
         log.info("[%s] Signup OTP: %s", phone, otp)
 
+        # === Phase 3: cvs_verify ===
         time.sleep(2)
-        verify = api_call_with_retry(client.signup_verify_otp, otp, phone)
-        if verify["status"] not in (200, 201):
-            log.error("[%s] Signup verify failed: %d", phone, verify["status"])
+        sc, data, _ = gp.cvs_verify(
+            local, str(verification_id), str(otp), method=method, flow="signup",
+            country_code=country_code, otp_token=str(otp_token) if otp_token else None,
+        )
+        if not is_success_response(sc, data):
+            log.error("[%s] Signup verify failed: HTTP %d %s", phone, sc, data)
             return None
+        # CVS 会话到 verify 结束；后续 customer_signup / token 不是 CVS 端点，
+        # 用回每请求随机 transaction-id（与参考脚本已验证行为一致）。
+        gp.clear_cvs_session()
+        verification_token = _pick_first(data, ["verification_token", "verificationToken",
+                                                "device_verification_token", "device_verification_token_id"])
+        access_token = _pick_first(data, ["access_token", "accessToken"])
+        refresh_token = _pick_first(data, ["refresh_token", "refreshToken"])
+        auth_code = _pick_first(data, ["authorization_code", "auth_code", "code"])
 
-        time.sleep(2)
-        names = [
-            "Budi Santoso", "Adi Pratama", "Siti Rahayu", "Dewi Lestari",
-            "Rizky Ramadhan", "Putri Wulandari", "Agus Setiawan", "Rina Kusuma",
-            "Hendra Wijaya", "Novi Anggraini", "Dian Permata", "Wahyu Hidayat",
-            "Fitri Handayani", "Joko Susilo", "Ratna Sari", "Bambang Prasetyo",
-            "Mega Puspita", "Eko Nugroho", "Sari Indah", "Yusuf Maulana",
-            "Lina Marlina", "Arief Rahman", "Wati Suryani", "Dedi Kurniawan",
-            "Ayu Lestari", "Rudi Hartono", "Nisa Fitriani", "Bayu Anggara",
-            "Sri Mulyani", "Fajar Setiadi", "Indra Gunawan", "Tika Rahmawati",
-        ]
-        signup = api_call_with_retry(client.signup_create_account,
-                                     name=random.choice(names), phone=phone, email="", country="ID")
-        if signup["status"] not in (200, 201):
-            err = get_error_code(signup)
-            if "phone_already_taken" not in err:
-                log.error("[%s] Signup failed: %s", phone, signup["body"])
-                return None
-        log.info("[%s] Signup success (uid=%s)", phone, client.user_uuid)
-
-        # === Phase 2: Refresh ===
-        time.sleep(5)
-        refresh = api_call_with_retry(client.refresh_token)
-        if refresh["status"] not in (200, 201):
-            log.error("[%s] Token refresh failed: %d", phone, refresh["status"])
-            return None
-        log.info("[%s] Token refreshed", phone)
-
-        # === Phase 3: GoPay Init ===
-        time.sleep(2)
-        api_call_with_retry(client.gopay_init)
-        time.sleep(2)
-        api_call_with_retry(client.gopay_get_profiles)
-        time.sleep(2)
-        profile = api_call_with_retry(client.get_user_profile)
-        is_pin_set = profile["body"].get("data", {}).get("is_pin_setup", False) if profile["status"] == 200 else False
-
-        if is_pin_set:
-            log.info("[%s] PIN already set", phone)
-        else:
-            # === Phase 4: PIN Setup ===
-            log.info("[%s] Setting PIN...", phone)
-            sms_request_another(api_key, aid)
-            time.sleep(2)
-
-            pin_otp_r = api_call_with_retry(client.pin_request_otp)
-            if pin_otp_r["status"] not in (200, 201):
-                log.error("[%s] PIN OTP request failed: %d", phone, pin_otp_r["status"])
-                return None
-
-            pin_code = sms_wait_code(api_key, aid, timeout=60)
-            if not pin_code:
-                log.warning("[%s] PIN OTP timeout 60s, resending...", phone)
-                resend_body = {
-                    "client_id": _GOJEK_CLIENT_ID,
-                    "client_secret": _GOJEK_CLIENT_SECRET,
-                    "flow": "goto_pin_wa_sms",
-                    "verification_id": client.auth.verification_id,
-                    "verification_method": "otp_sms",
-                }
-                time.sleep(2)
-                resend = client._sso_post("/cvs/v1/initiate", resend_body)
-                if resend["status"] in (200, 201):
-                    inner = resend["body"].get("data", resend["body"])
-                    client.auth.otp_token = inner.get("otp_token", "")
-                    sms_request_another(api_key, aid)
-                    pin_code = sms_wait_code(api_key, aid, timeout=180)
-
-            if not pin_code:
-                log.error("[%s] PIN OTP not received", phone)
-                return None
-            log.info("[%s] PIN OTP: %s", phone, pin_code)
-
-            time.sleep(2)
-            pin_verify = api_call_with_retry(client.pin_verify_otp, pin_code)
-            if pin_verify["status"] not in (200, 201):
-                log.error("[%s] PIN verify failed: %d", phone, pin_verify["status"])
-                return None
-
-            time.sleep(2)
-            pin_result = api_call_with_retry(client.pin_setup, pin)
-            if pin_result["status"] not in (200, 201):
-                log.error("[%s] PIN setup failed: %d", phone, pin_result["status"])
-                return None
-            log.info("[%s] PIN set OK", phone)
-
-        # === Phase 5: Post-registration hook (activate GoPay wallet) ===
-        # 手机端 onboarding 最后会显式激活钱包，服务端据此发放新人 1 Rp 福利。
-        # 纯协议之前漏了这步，钱包停在"已注册未激活"中间态，所以没拿到赠送余额。
-        # 失败不阻断注册（号本身已可用），只记日志方便排查。
-        time.sleep(2)
-        try:
-            hook = api_call_with_retry(client.pin_post_registration_hook)
-            if hook["status"] in (200, 201):
-                log.info("[%s] Post-registration hook OK (GoPay wallet activated)", phone)
-            else:
-                log.warning(
-                    "[%s] Post-registration hook returned %d: %s",
-                    phone, hook["status"], hook["body"],
+        # === Phase 4: customer_signup（多凭证轮试 + WAF 重试）===
+        account_id = None
+        if verification_token and not access_token:
+            try:
+                (access_token, refresh_token, account_id,
+                 _created_without_token, last_err) = _signup_with_variants(
+                    gp, local, random.choice(_INDO_NAMES), country_code, str(verification_token),
                 )
-        except Exception as exc:
-            log.warning("[%s] Post-registration hook failed (ignored): %s", phone, exc)
+            except _PhoneAlreadyRegistered:
+                log.info("[%s] Already registered, skipping", phone)
+                return None
+            if not access_token and not _created_without_token and last_err is not None:
+                log.error("[%s] customer_signup failed: HTTP %s %s", phone, last_err["status"], last_err["data"])
+                return None
 
-        # === Save account ===
+        # === Phase 5: token 兑换（没直接拿到 access_token 时）===
+        if not access_token:
+            if verification_token:
+                sc, data, _ = gp.token(verification_token=str(verification_token), account_id=str(account_id or local))
+            elif auth_code:
+                sc, data, _ = gp.token(authorization_code=str(auth_code), account_id=str(account_id or local))
+            else:
+                log.error("[%s] no access_token / verification_token / auth_code after verify", phone)
+                return None
+            if not is_success_response(sc, data):
+                log.error("[%s] token exchange failed: HTTP %d %s", phone, sc, data)
+                return None
+            access_token = _pick_first(data, ["access_token", "accessToken"])
+            refresh_token = _pick_first(data, ["refresh_token", "refreshToken"]) or refresh_token
+        if not access_token:
+            log.error("[%s] no access_token after token exchange", phone)
+            return None
+
+        # signup 直返的 RS256 token 会被 customer API 判 "Session is revoked"，
+        # 必须用 refresh_token 换正常 goto-auth session（幂等）。
+        if refresh_token:
+            sc, data_rt, _ = gp.token(refresh_token=str(refresh_token), account_id="")
+            if is_success_response(sc, data_rt):
+                access_token = _pick_first(data_rt, ["access_token", "accessToken"]) or access_token
+                refresh_token = _pick_first(data_rt, ["refresh_token", "refreshToken"]) or refresh_token
+                log.info("[%s] refreshed signup token for customer APIs", phone)
+
+        log.info("[%s] Signup success", phone)
+        customer_id = extract_account_id(data if isinstance(data, dict) else {}) or str(account_id or "")
+
+        # === Phase 6: 设 PIN（goto_pin_wa_sms 二次 CVS OTP）===
+        sc, data, _ = gp.pin_allowed(str(access_token), pin)
+        if not is_success_response(sc, data):
+            log.error("[%s] pin_allowed failed: HTTP %d %s", phone, sc, data)
+            return None
+
+        # PIN 是另一段独立 CVS 流程（goto_pin_wa_sms），开新的会话 transaction-id。
+        gp.new_cvs_session()
+        sc, data, _ = gp.cvs_methods_pin(str(access_token))
+        if not is_success_response(sc, data):
+            log.error("[%s] pin_cvs_methods failed: HTTP %d %s", phone, sc, data)
+            return None
+        pin_vid = _pick_first(data, ["verification_id", "challenge_id"])
+        pin_method = "otp_sms"
+        pin_methods = _pick_first(data, ["methods"])
+        if isinstance(pin_methods, list) and "otp_sms" not in pin_methods and pin_methods:
+            pin_method = str(_pick_first(data, ["default_method"]) or pin_methods[0])
+        if not pin_vid:
+            log.error("[%s] pin_cvs_methods no verification_id", phone)
+            return None
+
+        # 让接码平台准备下一条短信（同 aid 复用），再触发 PIN OTP
+        sms_request_another(api_key, aid)
+        time.sleep(2)
+        sc, data, _ = gp.cvs_initiate_pin(str(access_token), str(pin_vid), method=pin_method)
+        if not is_success_response(sc, data, allow=(200, 201, 202, 204)):
+            log.error("[%s] pin_cvs_initiate failed: HTTP %d %s", phone, sc, data)
+            return None
+        pin_otp_token = _pick_first(data, ["otp_token", "otpToken"])
+        if not pin_otp_token:
+            log.error("[%s] pin_cvs_initiate no otp_token", phone)
+            return None
+
+        pin_code = sms_wait_code(api_key, aid, timeout=180)
+        if not pin_code:
+            log.warning("[%s] PIN OTP timeout, retry once via cvs_retry_pin", phone)
+            sc, data_r, _ = gp.cvs_retry_pin(str(access_token), str(pin_otp_token), method=pin_method)
+            if is_success_response(sc, data_r, allow=(200, 201, 202, 204)):
+                pin_otp_token = _pick_first(data_r, ["otp_token", "otpToken"]) or pin_otp_token
+                sms_request_another(api_key, aid)
+                pin_code = sms_wait_code(api_key, aid, timeout=180)
+        if not pin_code:
+            log.error("[%s] PIN OTP not received", phone)
+            return None
+        log.info("[%s] PIN OTP: %s", phone, pin_code)
+
+        time.sleep(2)
+        sc, data, _ = gp.cvs_verify_pin(str(access_token), str(pin_vid), str(pin_code), str(pin_otp_token), method=pin_method)
+        if not is_success_response(sc, data):
+            log.error("[%s] pin_cvs_verify failed: HTTP %d %s", phone, sc, data)
+            return None
+        pin_verification_token = _pick_first(data, ["verification_token", "verificationToken"])
+        if not pin_verification_token:
+            log.error("[%s] pin_cvs_verify no verification_token", phone)
+            return None
+        # PIN CVS 会话结束，后续 pin_setup_token / profile 用随机 txn。
+        gp.clear_cvs_session()
+
+        sc, data, _ = gp.pin_setup_token_after_otp(str(access_token), pin, str(pin_verification_token))
+        if not is_success_response(sc, data):
+            log.error("[%s] pin_setup failed: HTTP %d %s", phone, sc, data)
+            return None
+
+        # 非破坏性完成校验：profile.is_pin_setup 明确为 False 才算失败
+        sc, data_prof, _ = gp.user_profile(str(access_token))
+        is_pin_setup = _pick_first(data_prof, ["is_pin_setup", "isPinSetup"])
+        if is_pin_setup is False:
+            log.error("[%s] profile says PIN not set: %s", phone, data_prof)
+            return None
+        log.info("[%s] PIN set OK", phone)
+
+        # === 组装下游兼容 client + 落库 ===
+        client = GoPayAppClient(
+            gp,
+            phone=phone,
+            local=local,
+            user_uuid=customer_id,
+            access_token=str(access_token),
+            refresh_token=str(refresh_token or ""),
+        )
         _save_account(phone, local, pin, aid, client)
 
         success = True
@@ -397,6 +583,10 @@ def _register_one(api_key: str, pin: str, proxy: str, envelope_did: str) -> Opti
         return None
     finally:
         if not success:
+            try:
+                gp.close()
+            except Exception:
+                pass
             _deferred_cancel_phone(api_key, aid, phone, rented_at)
 
 
@@ -568,10 +758,25 @@ def _resume_account(phone: str, proxy: str = "") -> Optional[dict]:
 
     if not proxy:
         proxy = _make_proxy()
-    client = GojekClient.from_phone(entry["phone"], proxy=proxy)
-    client.auth.access_token = entry["access_token"]
-    client.auth.refresh_token = entry["refresh_token"]
-    client.user_uuid = entry.get("customer_id", "")
+
+    # 用 GoPay App 协议重建 client（设备指纹按手机号确定性派生，同号同指纹）。
+    device = build_device_profile(entry["phone"])
+    gp = GoPayProtocol(
+        device=device,
+        signer=_make_app_signer(),
+        client_id=_GP_AUTH_ID,
+        client_secret=_GP_AUTH_SECRET,
+        debug=False,
+        proxy=proxy,
+    )
+    client = GoPayAppClient(
+        gp,
+        phone=entry["phone"],
+        local=entry.get("local", ""),
+        user_uuid=entry.get("customer_id", ""),
+        access_token=entry.get("access_token", ""),
+        refresh_token=entry.get("refresh_token", ""),
+    )
 
     log.info("[resume] Refreshing token for %s...", entry["phone"])
     try:

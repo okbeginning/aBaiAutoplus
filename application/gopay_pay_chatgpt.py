@@ -534,6 +534,7 @@ def step_grab_midtrans_url(
     bit_api_token: str = "",
     proxy: Optional[str] = None,
     timeout_seconds: int = 300,
+    capture_dir: str = "",
     cancel_check: Optional[Callable[[], bool]] = None,
     log: Callable[[str], None] = print,
 ) -> str:
@@ -544,6 +545,9 @@ def step_grab_midtrans_url(
       camoufox_headed / camoufox_headless / bitbrowser_headed /
       bitbrowser_hidden / bitbrowser_headless。
     bitbrowser_* 必须提供 ``bit_profile_id``。
+
+    ``capture_dir`` 非空时开启调试抓包：抓到 midtrans_url 不关浏览器，停在
+    付款页让人工手动付款，录 HAR + dump 每页 HTML。
     """
     from platforms.chatgpt import payment as chatgpt_payment
     from platforms._browser_backend import parse_checkout_mode, DEFAULT_BIT_API_URL
@@ -563,6 +567,7 @@ def step_grab_midtrans_url(
         backend_config=backend_config,
         proxy=proxy,
         timeout_seconds=timeout_seconds,
+        capture_dir=capture_dir,
         cancel_check=cancel_check,
         log=log,
     )
@@ -808,6 +813,8 @@ def execute_gopay_pay_chatgpt(
     smsbower_api_key: str = "",
     max_price: str = "",
     gopay_source: str = "auto",
+    capture_payment: bool = False,
+    capture_dir: str = "",
     log: Callable[[str], None] = print,
     cancel_check: Optional[Callable[[], bool]] = None,
 ) -> dict:
@@ -856,6 +863,15 @@ def execute_gopay_pay_chatgpt(
         raise RuntimeError("chatgpt_account_id 为 0 时必须提供 midtrans_url_override")
 
     # ① 拿 cashier_url（除非已 override）
+    # 抓包模式：算一个本次抓包目录（前端开关 capture_payment 打开时）。
+    effective_capture_dir = ""
+    if capture_payment:
+        base = str(capture_dir or "").strip()
+        if not base:
+            base = os.path.join(os.getcwd(), "_gopay_capture")
+        effective_capture_dir = os.path.join(base, time.strftime("%Y%m%d_%H%M%S"))
+        log(f"[capture] 抓包模式已开启，HAR/HTML 将保存到: {effective_capture_dir}")
+
     if not midtrans_url_override:
         ttl_guard.check()
         if not cashier_url_override:
@@ -876,10 +892,20 @@ def execute_gopay_pay_chatgpt(
             bit_profile_id=bit_profile_id,
             proxy=proxy,
             timeout_seconds=grab_timeout,
+            capture_dir=effective_capture_dir,
             cancel_check=cancel_check,
             log=log,
         )
     midtrans_url = out["midtrans_url"]
+
+    # 抓包模式：midtrans 抓到后浏览器已停在付款页让人工手动付款（走完后
+    # 落 HAR/HTML）。此时不跑协议付款，直接返回——抓包就是为了拿数据，不是
+    # 真的让程序付款。
+    if capture_payment:
+        log("[capture] 抓包完成，跳过协议付款（人工已在浏览器内手动付款）")
+        out["captured"] = True
+        out["capture_dir"] = effective_capture_dir
+        return out
 
     # ③ 选 GoPay 号 + 协议付款
     ttl_guard.check()

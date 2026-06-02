@@ -1593,6 +1593,14 @@ def _execute_gopay_pay_chatgpt_task(payload: dict[str, Any], logger: TaskLogger)
     max_price = str(payload.get("max_price") or "").strip()
     # GoPay 号来源：auto（默认，先池后注册）/ pool（只用池）/ register（强制注册）。
     gopay_source = str(payload.get("gopay_source") or "auto").strip().lower()
+    # 调试抓包开关（前端）：开启后抓到 midtrans_url 不关浏览器，停在付款页让
+    # 人工手动走完 GoPay 网页付款，全程录 HAR + dump 每页 HTML，不跑协议付款。
+    _capture_raw = payload.get("capture_payment")
+    capture_payment = (
+        _capture_raw is True
+        or str(_capture_raw or "").strip().lower() in ("1", "true", "yes", "on")
+    )
+    capture_dir = str(payload.get("capture_dir") or "")
 
     total = len(chatgpt_ids)
     concurrency = min(max(int(payload.get("concurrency") or 1), 1), total)
@@ -1655,6 +1663,8 @@ def _execute_gopay_pay_chatgpt_task(payload: dict[str, Any], logger: TaskLogger)
                 smsbower_api_key=smsbower_api_key,
                 max_price=max_price,
                 gopay_source=gopay_source,
+                capture_payment=capture_payment,
+                capture_dir=capture_dir,
                 log=logger.log,
                 cancel_check=logger.is_cancel_requested,
             )
