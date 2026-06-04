@@ -12,8 +12,9 @@
 </p>
 
 <p align="center">
+  <b>全程vibe coding，代码质量有所欠缺</b><br/>
   <b>ChatGPT plus的AI 平台账号自动注册与管理</b><br/>
-  <b>协议 / 浏览器双模式 · PayPal浏览器注册+内置 GoPay 协议付款 ChatGPT Plus · Mac / Windows 桌面版一键启动</b>
+  <b>协议 / 浏览器双模式 · PayPal浏览器注册+内置 GoPay 协议付款 ChatGPT Plus </b>
 </p>
 
 > ⚠️ **免责声明**：本项目仅供学习和研究使用，不得用于任何商业用途，也不得用于违反目标平台服务条款（ToS）的行为。使用本项目所产生的一切后果由使用者自行承担。
@@ -81,18 +82,18 @@
 
 | 平台          | 协议模式 | 浏览器模式 | OAuth | 备注                         |
 | ------------- | :------: | :--------: | :---: | ---------------------------- |
-| ChatGPT       |    ✅    |     ✅     |  ✅   | Plus 支付链接 / PayPal 结账  |
-| Cursor        |    ✅    |     ✅     |  ✅   | 需手机验证                   |
-| Kiro          |    ✅    |     ✅     |  ✅   | 支持账号切换                 |
-| Trae.ai       |    ✅    |     ✅     |  ✅   | Pro 升级链接生成             |
-| Grok          |    ✅    |     ✅     |  ✅   |                              |
-| Windsurf      |    ✅    |     ✅     |  ✅   | Trial 链接生成               |
-| Tavily        |    ✅    |     ✅     |  ✅   |                              |
-| Blink         |    ✅    |     ✅     |  ✅   |                              |
-| Cerebras      |    ✅    |     ✅     |  ✅   |                              |
-| OpenBlockLabs |    ✅    |     ✅     |  ✅   |                              |
+| ChatGPT       |    ✅    |    ✅     |  ✅   | Plus 支付链接 / PayPal 结账  |
+| Cursor        |    -    |     ✅     |  -   | 需手机验证                   |
+| Kiro          |    -    |     ✅     |  -   | 支持账号切换                 |
+| Trae.ai       |    -    |     ✅     |  -   | Pro 升级链接生成             |
+| Grok          |    -    |     ✅     |  -   |                              |
+| Windsurf      |    -    |     ✅     |  -   | Trial 链接生成               |
+| Tavily        |    -    |     ✅     |  -   |                              |
+| Blink         |    -    |     ✅     |  -   |                              |
+| Cerebras      |    -    |     ✅     |  -   |                              |
+| OpenBlockLabs |    -    |     ✅     |  -   |                              |
 | GoPay         |    ✅    |     —      |  —    | 印尼 GoPay，手机 + PIN，付款 Plus |
-| Anything      |    ✅    |     ✅     |  —    | 通用适配器，配置即接入新平台 |
+| Anything      |    -    |     ✅     |  —    | 通用适配器，配置即接入新平台 |
 
 > 各平台实际支持的执行器以插件 `supported_executors` 声明为准，可在 Web UI「平台能力」页查看与覆盖。
 
